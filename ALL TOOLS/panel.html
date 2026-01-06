@@ -33,12 +33,13 @@
     margin-top: 55px;
   }
 
+  /* SIDEBAR LINKS */
   #sidebar a {
     display: block;
     color: #e5e5e5;
     text-decoration: none;
     margin: 10px 0;
-    font-size: 12px;
+    font-size: 11px;  /* liitan lang */
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
@@ -64,18 +65,19 @@
     color: #fff;
   }
 
-  /* COLLAPSED MODE */
+  /* COLLAPSED MODE: emoji only */
   #sidebar.collapsed a {
-    font-size: 0;
-    text-align: center;
-    padding: 10px 0;
-  }
+  font-size: 0;        
+  text-align: center;
+  padding: 10px 0;
+}
 
-  #sidebar.collapsed a::before {
-    content: "•";
-    font-size: 20px;
-    color: #7aa2ff;
-  }
+#sidebar.collapsed a::before {
+  content: attr(data-emoji);  
+  font-size: 18px;  
+  color: #7aa2ff;
+}
+
 
   /* TOGGLE BUTTON */
   #toggleBtn {
@@ -117,13 +119,13 @@
   <button id="toggleBtn" onclick="toggleSidebar()">☰</button>
 
   <div id="menu">
-    <a onclick="loadPage(this,'INVENTORY_CALCULATOR_3.0.html')">📦 INVENTORY CALCULATOR</a>
-    <a onclick="loadPage(this,'TALLY_ORDER-NAME_CHECKER_2.0.html')">🧾 TALLY / NAME CHECKER</a>
-    <a onclick="loadPage(this,'CHECK_GSHEET_CUSTOMER.html')">📊 CHECK GSHEET CUSTOMER</a>
-    <a onclick="loadPage(this,'RETURN_TALLY_STICKER.html')">🔁 RETURN TALLY STICKER</a>
-    <a onclick="loadPage(this,'EXTRACT_UNIQUE_SF_PLUS_CHECK_PRICE.html')">🚚 CHECK SHIPPING FEE</a>
-    <a onclick="loadPage(this,'PDF_COUNTER_1.1.html')">📄 PDF COUNTER</a>
-    <a onclick="loadPage(this,'PROFIT_CALCULATOR.html')">💰 PROFIT CALCULATOR</a>
+    <a onclick="loadPage(this,'INVENTORY_CALCULATOR_3.0.html')" data-emoji="📦">📦 INVENTORY CALCULATOR</a>
+    <a onclick="loadPage(this,'TALLY_ORDER-NAME_CHECKER_2.0.html')" data-emoji="🧾">🧾 TALLY / NAME CHECKER</a>
+    <a onclick="loadPage(this,'CHECK_GSHEET_CUSTOMER.html')" data-emoji="📊">📊 CHECK GSHEET CUSTOMER</a>
+    <a onclick="loadPage(this,'RETURN_TALLY_STICKER.html')" data-emoji="🔁">🔁 RETURN TALLY STICKER</a>
+    <a onclick="loadPage(this,'EXTRACT_UNIQUE_SF_PLUS_CHECK_PRICE.html')" data-emoji="🚚">🚚 CHECK SHIPPING FEE</a>
+    <a onclick="loadPage(this,'PDF_COUNTER_1.1.html')" data-emoji="📄">📄 PDF COUNTER</a>
+    <a onclick="loadPage(this,'PROFIT_CALCULATOR.html')" data-emoji="💰">💰 PROFIT CALCULATOR</a>
   </div>
 </div>
 
@@ -135,24 +137,26 @@
 const iframe = document.getElementById("iframeContent");
 const links = document.querySelectorAll("#menu a");
 
+/* GET TOOL FROM URL PARAM */
 function getToolFromURL() {
   const params = new URLSearchParams(window.location.search);
   return params.get("tool");
 }
 
+/* LOAD TOOL INTO IFRAME */
 function loadPage(el, fileName) {
   iframe.src = fileName;
   links.forEach(a => a.classList.remove("active"));
   if (el) el.classList.add("active");
 }
 
+/* TOGGLE SIDEBAR */
 function toggleSidebar() {
   document.getElementById("sidebar").classList.toggle("collapsed");
 }
 
 /* INITIAL LOAD */
 const toolFromHome = getToolFromURL();
-
 if (toolFromHome) {
   iframe.src = toolFromHome;
 } else {
