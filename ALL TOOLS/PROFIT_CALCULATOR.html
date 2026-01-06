@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Profit Calculator</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      width: 500px;
+      padding: 10px 15px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    label {
+      margin-top: 5px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 6px;
+      margin-bottom: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 8px;
+      width: 100%;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Profit Calculator</h2>
+
+    <label>Ad Spend (₱)</label>
+    <input type="number" id="adSpend">
+
+    <label>Number of Orders</label>
+    <input type="number" id="orders">
+
+    <label>RTS (%)</label>
+    <input type="number" id="rts">
+
+    <label>Selling Price (₱)</label>
+    <input type="number" id="price">
+
+    <label>COGS (₱)</label>
+    <input type="number" id="cogs">
+
+    <label>COD Fee (%)</label>
+    <input type="number" id="codFee" value="1.5">
+
+    <label>Shipping Fee (₱ per order)</label>
+    <input type="number" id="shipping" value="37">
+
+    <button onclick="calculateProfit()">Compute Profit</button>
+
+    <div class="result" id="output"></div>
+  </div>
+
+  <script>
+    function calculateProfit() {
+      const adSpend = parseFloat(document.getElementById('adSpend').value);
+      const orders = parseInt(document.getElementById('orders').value);
+      const rts = parseFloat(document.getElementById('rts').value) / 100;
+      const price = parseFloat(document.getElementById('price').value);
+      const cogs = parseFloat(document.getElementById('cogs').value);
+      const codFeePercent = parseFloat(document.getElementById('codFee').value) / 100;
+      const shipping = parseFloat(document.getElementById('shipping').value);
+
+      const shipped = Math.floor(orders * 0.95);
+      const delivered = Math.floor(shipped * (1 - rts));
+      const revenue = delivered * price;
+      const totalCOGS = delivered * cogs;
+      const totalShipping = shipped * shipping;
+      const totalCODFee = delivered * (price * codFeePercent);
+      const totalCost = adSpend + totalCOGS + totalShipping + totalCODFee;
+      const profit = revenue - totalCost;
+      const cpp = adSpend / orders;
+      const profitPerOrder = profit / orders;
+      const profitPercentage = (profit / (orders * price)) * 100;
+
+      document.getElementById('output').innerHTML = `
+        <strong>Shipped Orders (95%):</strong> ${shipped}<br>
+        <strong>Delivered Orders:</strong> ${delivered}<br>
+        <strong>Net Profit:</strong> ₱${profit.toFixed(2)}<br>
+        <strong>CPP (Cost Per Purchase):</strong> ₱${cpp.toFixed(2)}<br>
+        <strong>Net Profit per Order:</strong> ₱${profitPerOrder.toFixed(2)}<br>
+        <strong>Profit Percentage:</strong> ${profitPercentage.toFixed(2)}%
+      `;
+    }
+  </script>
+</body>
+</html>
