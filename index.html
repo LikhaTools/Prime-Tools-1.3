@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Welcome - Tool Hub</title>
+
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+    box-sizing: border-box;
+    background: linear-gradient(135deg, #1b1b1b, #3f3f3f);
+    color: #fff;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 3em;
+    margin-bottom: 10px;
+    text-shadow: 0 3px 8px rgba(0,0,0,0.6);
+  }
+
+  p {
+    font-size: 1.2em;
+    margin-bottom: 35px;
+    color: #e5e5e5;
+  }
+
+  .tool-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 18px;
+    max-width: 950px;
+    margin: auto;
+  }
+
+  .tool-button {
+    flex: 1 1 220px;
+    max-width: 260px;
+    padding: 18px 12px;
+    background: rgba(40,40,40,0.85);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: bold;
+    border: 2px solid #7aa2ff;
+    box-shadow: 0 6px 10px rgba(0,0,0,0.35);
+    transition: 
+      transform 0.25s ease,
+      box-shadow 0.25s ease,
+      border-color 0.25s ease;
+  }
+
+  .tool-button span {
+    font-size: 1.2em;
+    margin-right: 8px;
+  }
+
+  .tool-button:hover {
+    transform: translateY(-6px) scale(1.03);
+    border-color: #3b82f6;
+    box-shadow:
+      0 10px 18px rgba(0,0,0,0.5),
+      0 0 12px rgba(59,130,246,0.6);
+  }
+
+  @media (max-width: 600px) {
+    .tool-button {
+      flex: 1 1 100%;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<h1>Welcome</h1>
+<p>Select a tool to get started</p>
+
+<div class="tool-grid">
+  <a href="ALL TOOLS/panel.html?tool=INVENTORY_CALCULATOR_3_0.html" class="tool-button">
+    <span>📦</span>Inventory Calculator
+  </a>
+
+  <a href="ALL TOOLS/panel.html?tool=TALLY_ORDER_NAME_CHECKER_2_0.html" class="tool-button">
+    <span>🧾</span>Tally / Name Checker
+  </a>
+
+  <a href="ALL TOOLS/panel.html?tool=CHECK_GSHEET_CUSTOMER.html" class="tool-button">
+    <span>📊</span>Check GSheet Customer
+  </a>
+
+  <a href="ALL TOOLS/panel.html?tool=RETURN_TALLY_STICKER.html" class="tool-button">
+    <span>🔁</span>Return Tally Sticker
+  </a>
+
+  <a href="ALL TOOLS/panel.html?tool=EXTRACT_UNIQUE_SF_PLUS_CHECK_PRICE.html" class="tool-button">
+    <span>🚚</span>Check Shipping Fee
+  </a>
+
+  <a href="ALL TOOLS/panel.html?tool=PDF_COUNTER_1_1.html" class="tool-button">
+    <span>📄</span>PDF Counter
+  </a>
+
+  <a href="ALL TOOLS/panel.html?tool=PROFIT_CALCULATOR.html" class="tool-button">
+    <span>💰</span>Profit Calculator
+  </a>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tool Hub Panel</title>
+
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    height: 100vh;
+    font-family: Arial, sans-serif;
+    background: #1b1b1b;
+  }
+
+  /* SIDEBAR */
+  #sidebar {
+    width: 230px;
+    background: linear-gradient(180deg, #1f1f1f, #2a2a2a);
+    color: white;
+    padding: 12px;
+    box-sizing: border-box;
+    transition: width 0.3s;
+    position: relative;
+    box-shadow: 4px 0 12px rgba(0,0,0,0.5);
+  }
+
+  #sidebar.collapsed {
+    width: 48px;
+  }
+
+  #menu {
+    margin-top: 55px;
+  }
+
+  #sidebar a {
+    display: block;
+    color: #e5e5e5;
+    text-decoration: none;
+    margin: 10px 0;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: 
+      background 0.25s,
+      border-color 0.25s,
+      transform 0.2s;
+  }
+
+  #sidebar a:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: #3b82f6;
+    transform: translateX(4px);
+  }
+
+  #sidebar a.active {
+    background: rgba(59,130,246,0.15);
+    border-color: #3b82f6;
+    color: #fff;
+  }
+
+  /* COLLAPSED MODE */
+  #sidebar.collapsed a {
+    font-size: 0;
+    text-align: center;
+    padding: 10px 0;
+  }
+
+  #sidebar.collapsed a::before {
+    content: "•";
+    font-size: 20px;
+    color: #7aa2ff;
+  }
+
+  /* TOGGLE BUTTON */
+  #toggleBtn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #111;
+    color: white;
+    border: 1px solid #444;
+    cursor: pointer;
+    padding: 6px 8px;
+    font-size: 16px;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+
+  #toggleBtn:hover {
+    background: #222;
+  }
+
+  /* CONTENT */
+  #content {
+    flex: 1;
+    background: #111;
+  }
+
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: white;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="sidebar">
+  <button id="toggleBtn" onclick="toggleSidebar()">☰</button>
+
+  <div id="menu">
+    <a onclick="loadPage(this,'INVENTORY_CALCULATOR_3.0.html')">📦 INVENTORY CALCULATOR</a>
+    <a onclick="loadPage(this,'TALLY_ORDER-NAME_CHECKER_2.0.html')">🧾 TALLY / NAME CHECKER</a>
+    <a onclick="loadPage(this,'CHECK_GSHEET_CUSTOMER.html')">📊 CHECK GSHEET CUSTOMER</a>
+    <a onclick="loadPage(this,'RETURN_TALLY_STICKER.html')">🔁 RETURN TALLY STICKER</a>
+    <a onclick="loadPage(this,'EXTRACT_UNIQUE_SF_PLUS_CHECK_PRICE.html')">🚚 CHECK SHIPPING FEE</a>
+    <a onclick="loadPage(this,'PDF_COUNTER_1.1.html')">📄 PDF COUNTER</a>
+    <a onclick="loadPage(this,'PROFIT_CALCULATOR.html')">💰 PROFIT CALCULATOR</a>
+  </div>
+</div>
+
+<div id="content">
+  <iframe id="iframeContent"></iframe>
+</div>
+
+<script>
+const iframe = document.getElementById("iframeContent");
+const links = document.querySelectorAll("#menu a");
+
+function getToolFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("tool");
+}
+
+function loadPage(el, fileName) {
+  iframe.src = fileName;
+  links.forEach(a => a.classList.remove("active"));
+  if (el) el.classList.add("active");
+}
+
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("collapsed");
+}
+
+/* INITIAL LOAD */
+const toolFromHome = getToolFromURL();
+
+if (toolFromHome) {
+  iframe.src = toolFromHome;
+} else {
+  loadPage(links[0], "INVENTORY_CALCULATOR_3.0.html");
+}
+</script>
+
+</body>
+</html>
