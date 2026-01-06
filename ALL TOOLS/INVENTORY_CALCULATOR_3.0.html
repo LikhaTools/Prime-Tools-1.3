@@ -8,35 +8,45 @@
       --bg:#f4f6f8;
       --card:#ffffff;
       --muted:#64748b;
-      --border:#e5e7eb;
-      --primary:#2563eb;
+      --border:#3b82f6; /* blue accent */
+      --primary:#3b82f6;
       --primary-weak:#e8efff;
       --success:#16a34a;
+      --text:#0f172a;
     }
     *{box-sizing:border-box}
-    body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; color:#0f172a }
+    body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; color:var(--text) }
     h1 { margin:0 0 12px 0; font-size:20px }
     h2 { margin-top:14px; font-size:13px; color:var(--muted) }
 
     .app { display:grid; grid-template-columns: 32% 68%; height:100vh }
 
-    .left { background:var(--card); padding:16px; overflow:auto; border-right:1px solid var(--border) }
-    .right { padding:20px; overflow:auto }
+    .left { 
+  background:var(--card); 
+  padding:16px 16px 16px 48px; /* top/right/bottom/left => left doubled */
+  overflow:auto; 
+  border-right:1px solid #e5e7eb; 
+  border-radius:12px 0 0 12px 
+}
 
-    textarea { width:100%; height:110px; padding:10px; font-size:13px; margin-top:6px; border:1px solid var(--border); border-radius:8px; resize:vertical; font-family: monospace }
+    .right { padding:20px; overflow:auto; background:var(--card); border-radius:0 12px 12px 0 }
 
-    .btn { padding:10px 14px; font-size:13px; background:var(--primary); color:#fff; border:none; border-radius:10px; cursor:pointer }
+    textarea { width:100%; height:110px; padding:10px; font-size:13px; margin-top:6px; border:1px solid #e5e7eb; border-radius:8px; resize:vertical; font-family: monospace }
+
+    .btn { padding:10px 14px; font-size:13px; background:var(--primary); color:#fff; border:none; border-radius:10px; cursor:pointer; transition: transform 0.2s, box-shadow 0.2s; margin-top:12px; }
+    .btn:hover { transform: translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.15) }
     .btn.ghost{ background:var(--primary-weak); color:var(--primary) }
     .btn.full{ width:100% }
 
     .copy-tables{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px }
     .copy-tables div{ display:flex; flex-direction:column }
-    .copy-tables textarea{ flex:1; height:250px; }
+    .copy-tables textarea{ flex:1; height:250px; background:#f9f9f9; color:#0f172a; border:1px solid var(--border) }
 
     table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:10px; table-layout: fixed }
     th, td { border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:13px; word-wrap: break-word }
-    th { background:#f8fafc; color:#334155 }
+    th { background:#f3f4f6; color:var(--muted) }
     tr:last-child td{ border-bottom:none }
+
   </style>
 </head>
 <body>
@@ -171,7 +181,6 @@ function compute(){
   restockCopy.value=`AUTO RESTOCK (${today})\n\n${rOut}`
   result.style.display='table'
 
-  /* ===== AUTO UPLOAD ===== */
   fetch(WEB_APP_URL,{
     method:'POST',
     mode:'no-cors',
