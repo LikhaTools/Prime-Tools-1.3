@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>INVENTORY</title>
+  <style>
+    :root{
+      --bg:#f4f6f8;
+      --card:#ffffff;
+      --muted:#64748b;
+      --border:#e5e7eb;
+      --primary:#2563eb;
+      --primary-weak:#e8efff;
+      --success:#16a34a;
+    }
+    *{box-sizing:border-box}
+    body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; color:#0f172a }
+    h1 { margin:0 0 12px 0; font-size:20px }
+    h2 { margin-top:14px; font-size:13px; color:var(--muted) }
+
+    .app { display:grid; grid-template-columns: 32% 68%; height:100vh }
+
+    .left { background:var(--card); padding:16px; overflow:auto; border-right:1px solid var(--border) }
+    .right { padding:20px; overflow:auto }
+
+    textarea { width:100%; height:110px; padding:10px; font-size:13px; margin-top:6px; border:1px solid var(--border); border-radius:8px; resize:vertical; font-family: monospace }
+
+    .btn { padding:10px 14px; font-size:13px; background:var(--primary); color:#fff; border:none; border-radius:10px; cursor:pointer }
+    .btn.ghost{ background:var(--primary-weak); color:var(--primary) }
+    .btn.full{ width:100% }
+
+    .copy-tables{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px }
+    .copy-tables div{ display:flex; flex-direction:column }
+    .copy-tables textarea{ flex:1; height:250px; }
+
+    table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:10px; table-layout: fixed }
+    th, td { border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:13px; word-wrap: break-word }
+    th { background:#f8fafc; color:#334155 }
+    tr:last-child td{ border-bottom:none }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <div class="left">
+    <h1>📥 DATA INPUT</h1>
+    <h2>A. STOCK</h2>
+    <textarea id="stock"></textarea>
+    <h2>B. HOLD ORDERS</h2>
+    <textarea id="hold"></textarea>
+    <h2>C. SHIPPED ITEMS</h2>
+    <textarea id="shipped"></textarea>
+    <h2>D. RETURN TO SENDER</h2>
+    <textarea id="rts"></textarea>
+    <h2>E. FROM SUPPLIER</h2>
+    <textarea id="supplier"></textarea>
+    <button class="btn full" onclick="compute()">COMPUTE</button>
+  </div>
+
+  <div class="right">
+    <h1>📊 RESULT</h1>
+
+    <div class="copy-tables">
+      <div>
+        <button class="btn ghost" onclick="copyText('stockCopy')">📋 COPY STOCK</button>
+        <textarea id="stockCopy" readonly></textarea>
+      </div>
+      <div>
+        <button class="btn ghost" onclick="copyText('restockCopy')">📋 COPY RESTOCK</button>
+        <textarea id="restockCopy" readonly></textarea>
+      </div>
+    </div>
+
+    <table id="result" style="display:none">
+      <thead>
+        <tr>
+          <th style="width:40%">ITEM NAME</th>
+          <th style="width:30%">STOCK RESULT</th>
+          <th style="width:30%">RESTOCK RESULT</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzGelrmzNyfSczfoTFw7M0029vISORBEyqRf9w8q0H-Nr4IVX0RD3aD-mOXoxtM3QDxYA/exec";
+
+/* ================= HELPERS ================= */
+function pcs(item){ const m=item.match(/^(\d+)\s*x/i); return m?Number(m[1]):1 }
+function clean(item){ return item.replace(/^\d+\s*x\s*/i,'').trim().toUpperCase() }
+function num(v){ return Number(String(v||0).replace(/,/g,'')) }
+function round100(n){ return n<=0?0:Math.ceil(n/100)*100 }
+
+function parse(text,col,multiply=true,dash=false){
+  const map={}
+  text.split('\n').slice(1).forEach(r=>{
+    if(!r.trim()) return
+    if(/grand total|auto stock/i.test(r)) return
+    if(dash){
+      const m=r.split('-')
+      if(m.length<2) return
+      map[m[0].trim()] = (map[m[0].trim()]||0) + num(m[1])
+      return
+    }
+    const c=r.split(/\t+/)
+    if(!c[col]) return
+    const name = clean(c[0])
+    let qty = num(c[col])
+    if(multiply) qty *= pcs(c[0])
+    map[name] = (map[name]||0)+qty
+  })
+  return map
+}
+
+/* ================= UPLOAD EXTRACT ================= */
+function extractStockUpload(){
+  const out=[]
+  stockCopy.value.split('\n').forEach(l=>{
+    if(!l.trim()) return
+    if(/AUTO STOCK/i.test(l)) return
+    if(l.includes('-')){
+      const p=l.split('-')
+      if(p.length<2) return
+      out.push({ item: p[0].trim().toUpperCase(), qty: Number(p[1].trim()) })
+    }
+  })
+  return out
+}
+
+function extractHoldUpload(){
+  const out=[]
+  holdEl.value.split('\n').forEach(l=>{
+    if(!l.trim()) return
+    const p=l.split(/\t+/)
+    if(p.length<2) return
+    out.push({ item: clean(p[0]), qty: Number(p[1].trim()) })
+  })
+  return out
+}
+
+/* ================= MAIN ================= */
+function compute(){
+  const today=new Date().toLocaleDateString('en-CA')
+  const stock=parse(stockEl.value,0,false,true)
+  const hold=parse(holdEl.value,1,true)
+  const order=parse(holdEl.value,2,true)
+  const shipped=parse(shippedEl.value,1,true)
+  const rts=parse(rtsEl.value,2,false)
+  const supplier=parse(supplierEl.value,0,true)
+
+  const items=new Set([...Object.keys(stock),...Object.keys(hold),...Object.keys(order)])
+  const tbody=document.querySelector('#result tbody')
+  tbody.innerHTML=''
+
+  let sOut='', rOut=''
+
+  items.forEach(i=>{
+    const demand=(hold[i]||0)+(order[i]||0)
+    const cur=(stock[i]||0)+(rts[i]||0)+(supplier[i]||0)-(shipped[i]||0)
+    const safeCur=Math.max(cur,0)
+    const rest=round100(Math.max(demand-safeCur,0))
+    tbody.innerHTML+=`<tr><td>${i}</td><td>${safeCur}</td><td>${rest}</td></tr>`
+    if(safeCur) sOut+=`${i} - ${safeCur}\n`
+    if(rest) rOut+=`${i} - ${rest}\n`
+  })
+
+  stockCopy.value=`AUTO STOCK (${today})\n\n${sOut}`
+  restockCopy.value=`AUTO RESTOCK (${today})\n\n${rOut}`
+  result.style.display='table'
+
+  /* ===== AUTO UPLOAD ===== */
+  fetch(WEB_APP_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      stock: extractStockUpload(),
+      hold: extractHoldUpload()
+    })
+  })
+}
+
+/* ================= COPY ================= */
+function copyText(id){
+  const el=document.getElementById(id)
+  el.select()
+  document.execCommand('copy')
+}
+
+const stockEl=document.getElementById('stock'),
+      holdEl=document.getElementById('hold'),
+      shippedEl=document.getElementById('shipped'),
+      rtsEl=document.getElementById('rts'),
+      supplierEl=document.getElementById('supplier'),
+      stockCopy=document.getElementById('stockCopy'),
+      restockCopy=document.getElementById('restockCopy'),
+      result=document.getElementById('result')
+</script>
+
+</body>
+</html>

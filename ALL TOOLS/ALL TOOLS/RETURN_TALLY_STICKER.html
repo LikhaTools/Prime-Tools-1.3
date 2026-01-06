@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Warehouse Tally</title>
+
+<style>
+:root{
+  --bg:#f4f6f8;
+  --card:#ffffff;
+  --border:#e5e7eb;
+  --primary:#2563eb;
+  --success:#16a34a;
+  --danger:#dc2626;
+  --excess:#f97316;
+  --text:#111827;
+  --muted:#6b7280;
+}
+
+*{box-sizing:border-box}
+
+body{
+  font-family:Inter, Arial, sans-serif;
+  background:var(--bg);
+  padding:30px;
+  color:var(--text);
+}
+
+.wrapper{max-width:1100px;margin:auto}
+
+.card{
+  background:var(--card);
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 15px 30px rgba(0,0,0,.08);
+  margin-bottom:20px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+}
+
+label{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:6px;
+  display:block;
+}
+
+textarea{
+  width:100%;
+  height:140px;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  resize:none;
+  font-family:monospace;
+}
+
+.actions{text-align:right;margin-top:10px}
+
+button{
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  padding:12px 22px;
+  border-radius:10px;
+  font-size:14px;
+  cursor:pointer;
+}
+
+table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+}
+
+thead th{
+  background:#f9fafb;
+  font-size:13px;
+  color:var(--muted);
+  border-bottom:1px solid var(--border);
+  padding:12px;
+}
+
+tbody td, tfoot td{
+  padding:12px;
+  border-bottom:1px solid var(--border);
+  text-align:center;
+}
+
+tbody tr{height:64px}
+
+.item{text-align:left;font-weight:600}
+
+input[type=number]{
+  width:100px;
+  height:36px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  text-align:center;
+}
+
+.badge{
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+}
+
+.match{background:var(--success)}
+.notmatch{background:transparent}
+
+.row-match{background:#dcfce7}
+.row-missing{background:#fee2e2}
+.row-excess{background:#fff4e5}
+</style>
+</head>
+
+<body>
+<div class="wrapper">
+
+<h1>📦 Return Tally Sticker</h1>
+
+<div class="card">
+  <div class="grid">
+    <div>
+      <label>PROCEED STICKER</label>
+      <textarea id="sentData"></textarea>
+    </div>
+    <div>
+      <label>SHIPPED ITEMS</label>
+      <textarea id="shippedData"></textarea>
+    </div>
+  </div>
+  <div class="actions">
+    <button onclick="process()">PROCESS TALLY</button>
+  </div>
+</div>
+
+<div class="card" id="result"></div>
+
+</div>
+
+<script>
+/* 🔥 KEY FIX: FULL LINE = UNIQUE KEY */
+function parse(text){
+  const map = {};
+  text.split('\n').forEach(l=>{
+    if(!l.trim() || /grand total/i.test(l)) return;
+    const p = l.split(/\t| {2,}/);
+    if(p.length < 2) return;
+
+    const key = p[0].trim(); // FULL TEXT (qty + name)
+    const qty = Number(p[1].replace(/,/g,''));
+    if(isNaN(qty)) return;
+
+    map[key] = (map[key] || 0) + qty;
+  });
+  return map;
+}
+
+function process(){
+  const sent = parse(sentData.value);
+  const ship = parse(shippedData.value);
+  const items = new Set([...Object.keys(sent), ...Object.keys(ship)]);
+
+  let totalSent = 0;
+  let totalShip = 0;
+
+  let html = `<table>
+    <thead>
+      <tr>
+        <th>ITEM</th>
+        <th>PROCEED</th>
+        <th>SHIPPED</th>
+        <th>RETURNED</th>
+        <th>STATUS</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  items.forEach(i=>{
+    const s = sent[i] || 0;
+    const sh = ship[i] || 0;
+
+    totalSent += s;
+    totalShip += sh;
+
+    html += `
+      <tr data-expected="${s - sh}">
+        <td class="item">${i}</td>
+        <td>${s}</td>
+        <td>${sh}</td>
+        <td><input type="number" min="0" oninput="check(this)"></td>
+        <td>
+          <span class="badge"></span>
+        </td>
+      </tr>`;
+  });
+
+  html += `
+    </tbody>
+    <tfoot>
+      <tr>
+        <td>TOTAL</td>
+        <td>${totalSent}</td>
+        <td>${totalShip}</td>
+        <td id="totalReturned">0</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>`;
+
+  result.innerHTML = html;
+}
+
+function check(input){
+  const tr = input.closest('tr');
+  const expected = Number(tr.dataset.expected);
+  const returned = Number(input.value || 0);
+  const diff = returned - expected;
+
+  const badge = tr.querySelector('.badge');
+  tr.classList.remove('row-match','row-missing','row-excess');
+
+  if(diff === 0){
+    badge.className = 'badge match';
+    badge.textContent = 'MATCH';
+    tr.classList.add('row-match');
+  }else if(diff < 0){
+    badge.className = 'badge notmatch';
+    badge.textContent = `MISSING ${Math.abs(diff)}`;
+    tr.classList.add('row-missing');
+  }else{
+    badge.className = 'badge notmatch';
+    badge.textContent = `EXCESS ${diff}`;
+    tr.classList.add('row-excess');
+  }
+
+  let total = 0;
+  document.querySelectorAll('tbody input').forEach(i=>{
+    total += Number(i.value || 0);
+  });
+  document.getElementById('totalReturned').innerText = total;
+}
+</script>
+
+</body>
+</html>
