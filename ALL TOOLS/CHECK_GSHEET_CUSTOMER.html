@@ -3,186 +3,219 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  /* ===== BODY ===== */
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f0f2f5;
-    margin: 0;
-    padding: 20px 40px 20px 60px; /* larger left margin */
-  }
-  h2 { 
-    text-align:center; 
-    color:#333; 
-    margin-bottom: 30px;
-  }
+:root{
+  --bg:#f4f6f8;
+  --card:#ffffff;
+  --primary:#1976d2;
+  --success:#4caf50;
+  --danger:#f44336;
+  --muted:#64748b;
+}
 
-  /* ===== CONTAINER ===== */
-  .container { 
-    display: flex; 
-    flex-wrap: wrap; 
-    gap: 40px; 
-  }
+* { box-sizing: border-box; }
 
-  .left, .right { 
-    flex: 1; 
-    min-width: 300px; 
-    background: #fff; 
-    padding: 20px; 
-    border-radius: 12px; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
-    box-sizing: border-box;
-  }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg);
+  margin: 0;
+  padding: 20px 20px 20px 60px;
+}
 
-  h3 { 
-    margin-top: 0; 
-    margin-bottom: 12px; 
-    color: #1976d2; 
-  }
+h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+}
 
-  /* ===== TEXTAREAS & SELECT ===== */
-  textarea, select { 
-    width: 100%; 
-    padding: 12px; 
-    font-size: 14px; 
-    border-radius: 8px; 
-    border: 1px solid #ccc; 
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-    resize: none;
-    display: block;
-    box-sizing: border-box;
-    margin-bottom: 12px;
-  }
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+}
 
-  select { cursor: pointer; }
+.left, .right {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
 
-  /* ===== BUTTON ===== */
-  button { 
-    padding: 12px 24px; 
-    font-size: 14px; 
-    border: none; 
-    border-radius: 8px; 
-    background: #1976d2; 
-    color: white; 
-    cursor: pointer; 
-    transition: background 0.3s, transform 0.2s;
-    display: block;
-  }
-  button:hover { 
-    background: #1565c0; 
-    transform: translateY(-2px);
-  }
+.left { 
+  flex: 1; 
+  min-width: 300px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 15px; 
+}
 
-  /* ===== TABLE ===== */
-  table { 
-    width: 100%; 
-    border-collapse: collapse; 
-    margin-top: 15px; 
-    border-radius: 8px; 
-    overflow: hidden; 
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  }
+.left h3 { margin-bottom: 10px; color: var(--primary); }
 
-  th { 
-    background:#1976d2; 
-    color:white; 
-    padding:10px; 
-    text-align:left; 
-    font-size: 14px;
-  }
-  td { 
-    padding:10px; 
-    border-bottom:1px solid #eee; 
-    font-size: 13px;
-    transition: background 0.3s;
-  }
+.left textarea {
+  width: 100%;
+  height: 250px;
+  padding: 12px;
+  font-size: 14px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  resize: none;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+}
 
-  tr.match td { background:#c8e6c9; }
-  tr.no-match td { background:#ffcdd2; }
-  tr:hover td { background: #f1f1f1; }
+.left button {
+  padding: 12px 24px;
+  background: var(--success);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+.left button:hover { 
+  background: #45a049;
+  transform: translateY(-2px);
+}
 
-  /* ===== RESPONSIVE ===== */
-  @media (max-width: 800px) { 
-    .container { flex-direction: column; } 
-  }
+.left #filteredData, .left table {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.right { 
+  flex: 2; 
+  min-width: 400px; 
+  overflow-x: auto; 
+}
+.right h3 { margin-bottom: 10px; color: var(--primary); }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+th {
+  background-color: var(--primary);
+  color: white;
+  text-align: left;
+  padding: 12px;
+  font-size: 14px;
+}
+
+td {
+  padding: 10px;
+  background: white;
+  border-bottom: 1px solid #ddd;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+tr.match td { background-color: #c8e6c9; }
+tr.no-match td { background-color: #ffcdd2; }
+tr:hover td { background-color: #f1f1f1; }
+
+#filteredData {
+  margin-top: 20px;
+  padding: 12px;
+  background: #e3f2fd;
+  border-radius: 10px;
+}
+#filteredData h3 { margin: 0 0 10px 0; color: var(--primary); }
+#filteredData ul { padding-left: 20px; margin: 0 0 15px 0; }
+
+@media (max-width: 800px) { 
+  .container { flex-direction: column; }
+  body { padding-left: 20px; }
+}
 </style>
 </head>
 <body>
 
-<h2>WEBSITE ORDER CUSTOMER NAME CHECKER</h2>
+<h2>ORDER CHECKER</h2>
 
 <div class="container">
-  <!-- Left panel -->
   <div class="left">
-    <h3>Select Page</h3>
-    <select id="pageSelect"></select>
-
-    <h3>Paste Website Names to Check</h3>
-    <textarea id="input" placeholder="One name per line"></textarea>
+    <h3>Paste Your Data</h3>
+    <textarea id="input" placeholder="Ex: Bianca Santos 34"></textarea>
     <button onclick="processData()">CHECK</button>
+
+    <!-- Filtered data section -->
+    <div id="filteredData"></div>
   </div>
 
-  <!-- Right panel -->
   <div class="right">
-    <h3>Results</h3>
+    <h3>Results Table</h3>
     <div id="output">Waiting for input...</div>
   </div>
 </div>
 
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwxV3WrsZoUCd6HcYYI3Fw_MSAJzAtHqmmbdu55pMtS3m_nJMjg254pd-FnMjrxt5C_1g/exec";
-let sheetData = [];
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwI0AjC7Vs6VJq4Um2KAGvDoE2nvYPq97eDtuUkDZCDf65jWdvMljD5Cgi9MaaIwd809g/exec";
+let sheetData = { orders: [], filtered: [] };
 
-// fetch sheet data
 fetch(WEB_APP_URL)
   .then(res => res.json())
-  .then(data => {
-      sheetData = data;
-      populateDropdown();
-  })
-  .catch(err => document.getElementById("output").innerText = "Error fetching sheet data.");
-
-// populate page dropdown
-function populateDropdown() {
-    const select = document.getElementById("pageSelect");
-    const pages = sheetData[0]; // first row = page names
-    pages.forEach((p, idx) => {
-        if(p) {
-            const option = document.createElement("option");
-            option.value = idx;
-            option.textContent = p;
-            select.appendChild(option);
-        }
-    });
-}
+  .then(data => sheetData = data)
+  .catch(err => document.getElementById("filteredData").innerText = "Error fetching sheet data.");
 
 function processData() {
-    const raw = document.getElementById("input").value.trim();
-    if(!raw) {
-        document.getElementById("output").innerHTML = "No names pasted.";
+    let raw = document.getElementById("input").value.trim();
+    if (!raw) {
+        document.getElementById("output").innerHTML = "No data pasted.";
         return;
     }
 
-    const selectedIndex = document.getElementById("pageSelect").value;
-    if(selectedIndex === "") {
-        document.getElementById("output").innerHTML = "Please select a page.";
-        return;
-    }
+    const rows = raw.split("\n").map(l => l.trim()).filter(l => l !== "");
+    let html = "<table>";
+    html += "<tr><th>Name</th><th>Likha Website</th><th>Likha Gsheet</th><th>Status</th></tr>";
 
-    const namesToCheck = raw.split("\n").map(n => n.trim()).filter(n => n !== "");
-    const colIndex = parseInt(selectedIndex); 
-    const pageNames = sheetData.slice(1).map(r => r[colIndex]).filter(n => n); // names under selected page
+    rows.forEach(r => {
+        const parts = r.split("\t");
+        const name = parts[0].trim();
+        const pastedOrder = parts[1] ? parts[1].trim() : "";
+        const sheetRow = sheetData.orders.find(s => s[0].toString().trim().toLowerCase() === name.toLowerCase());
+        const sheetOrder = sheetRow ? sheetRow[1].toString().trim() : "";
+        const match = sheetRow && sheetOrder === pastedOrder;
 
-    let html = "<table><tr><th>Name</th><th>Status</th></tr>";
-    namesToCheck.forEach(name => {
-        const match = pageNames.some(n => n.toLowerCase() === name.toLowerCase());
-        html += `<tr class="${match?'match':'no-match'}"><td>${name}</td><td>${match ? 'MATCH ✔':'NO NAME IN GSHEET ✖'}</td></tr>`;
+        html += `<tr class="${match ? 'match' : 'no-match'}">
+                    <td>${name}</td>
+                    <td>${pastedOrder}</td>
+                    <td>${sheetOrder}</td>
+                    <td>${match ? "MATCH ✔" : "NOT MATCH ✖"}</td>
+                 </tr>`;
     });
-    html += "</table>";
 
+    html += "</table>";
     document.getElementById("output").innerHTML = html;
+    displayFilteredData();
+}
+
+function displayFilteredData() {
+    const filteredDiv = document.getElementById("filteredData");
+    filteredDiv.innerHTML = "";
+
+    if (!sheetData.filtered || sheetData.filtered.length === 0) {
+        filteredDiv.innerHTML = "No filtered data available.";
+        return;
+    }
+
+    let html = "<h3>Double Names in Gsheet</h3>";
+
+    sheetData.filtered.forEach(column => {
+        const items = column.slice(1).filter(v => v !== "");
+        if (items.length === 0) return;
+
+        html += "<ul>";
+        items.forEach(val => html += `<li>${val}</li>`);
+        html += "</ul>";
+    });
+
+    filteredDiv.innerHTML = html;
 }
 </script>
 
 </body>
 </html>
-
