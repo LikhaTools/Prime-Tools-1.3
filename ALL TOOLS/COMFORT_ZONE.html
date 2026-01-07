@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stress Reliever: Walking Puppy</title>
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to bottom, #a1c4fd, #c2e9fb);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  h1 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .puppy-container {
+    position: relative;
+    width: 200px;
+    height: 200px;
+  }
+
+  .puppy {
+    width: 80px;
+    height: 80px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    background: url('https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUyYW8xNjR2d3Z3cTg4a3c5ZW1haTAzazh0Z2ZraG1maWluMTg3anY5bSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/XG6yirnUOL744/200w.gif') no-repeat center/contain;
+    animation: walk 6s infinite alternate linear;
+  }
+
+  @keyframes walk {
+    0% { transform: translateX(0) translateY(0) rotateY(0deg); }
+    25% { transform: translateX(100px) translateY(-20px) rotateY(0deg); }
+    50% { transform: translateX(200px) translateY(0px) rotateY(180deg); }
+    75% { transform: translateX(100px) translateY(-20px) rotateY(180deg); }
+    100% { transform: translateX(0) translateY(0) rotateY(0deg); }
+  }
+
+  /* Optional: Ground shadow */
+  .shadow {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 80px;
+    height: 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 50%;
+    filter: blur(2px);
+    animation: shadowMove 6s infinite alternate linear;
+  }
+
+  @keyframes shadowMove {
+    0%,100% { transform: translateX(0) scaleX(1); }
+    25% { transform: translateX(100px) scaleX(1.1); }
+    50% { transform: translateX(200px) scaleX(1); }
+    75% { transform: translateX(100px) scaleX(1.1); }
+  }
+</style>
+</head>
+<body>
+
+<h1>🐶 Relax with this Walking Puppy</h1>
+
+<div class="puppy-container">
+  <div class="puppy"></div>
+  <div class="shadow"></div>
+</div>
+
+<p style="margin-top:20px; color:#555; text-align:center;">Watch the puppy stroll back and forth… Breathe. Relax. 🐾</p>
+
+</body>
+</html>
