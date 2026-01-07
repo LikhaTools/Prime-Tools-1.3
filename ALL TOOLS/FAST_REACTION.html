@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reaction Time – Office Edition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{
+  --bg:#0f172a;
+  --card:#111827;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+  --accent:#22c55e;
+  --danger:#ef4444;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:radial-gradient(circle at top,#1e293b,#020617);
+  font-family:Inter,Segoe UI,Arial,sans-serif;
+  color:var(--text);
+}
+
+.app{
+  width:100%;
+  max-width:420px;
+  background:var(--card);
+  border-radius:20px;
+  padding:28px;
+  box-shadow:0 30px 60px rgba(0,0,0,.5);
+  text-align:center;
+}
+
+h1{
+  margin:0;
+  font-size:22px;
+  font-weight:600;
+}
+
+.subtitle{
+  font-size:14px;
+  color:var(--muted);
+  margin-top:6px;
+}
+
+.zone{
+  margin:26px 0;
+  height:160px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:20px;
+  font-weight:600;
+  background:#020617;
+  cursor:pointer;
+  transition:.15s ease;
+  user-select:none;
+}
+
+.zone.wait{
+  background:#020617;
+  color:var(--muted);
+}
+
+.zone.ready{
+  background:var(--accent);
+  color:#022c22;
+}
+
+.zone.tooSoon{
+  background:var(--danger);
+  color:#fff;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  background:#2563eb;
+  color:white;
+  font-size:16px;
+  font-weight:600;
+  cursor:pointer;
+  transition:.15s ease;
+}
+
+button:hover{opacity:.9}
+button:active{transform:scale(.98)}
+
+.result{
+  margin-top:18px;
+  font-size:18px;
+}
+
+.best{
+  margin-top:6px;
+  font-size:14px;
+  color:var(--muted);
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <h1>⚡ Reaction Time</h1>
+  <div class="subtitle">Click when it turns GREEN</div>
+
+  <div id="zone" class="zone wait">WAIT…</div>
+
+  <button onclick="start()">Start Test</button>
+
+  <div class="result" id="result"></div>
+  <div class="best" id="best"></div>
+</div>
+
+<script>
+let startTime = 0;
+let timeout = null;
+let active = false;
+let bestTime = localStorage.getItem("bestReaction") || null;
+
+const zone = document.getElementById("zone");
+const result = document.getElementById("result");
+const best = document.getElementById("best");
+
+if(bestTime){
+  best.innerHTML = "🏆 Best: " + bestTime + " ms";
+}
+
+function start(){
+  clearTimeout(timeout);
+  active = false;
+  zone.className = "zone wait";
+  zone.innerHTML = "WAIT…";
+  result.innerHTML = "";
+
+  timeout = setTimeout(()=>{
+    zone.className = "zone ready";
+    zone.innerHTML = "CLICK!";
+    startTime = performance.now();
+    active = true;
+  }, Math.random()*2500 + 2000);
+}
+
+zone.onclick = () => {
+  if(!active){
+    zone.className = "zone tooSoon";
+    zone.innerHTML = "TOO SOON 😅";
+    clearTimeout(timeout);
+    return;
+  }
+
+  const time = Math.round(performance.now() - startTime);
+  active = false;
+
+  result.innerHTML = "⏱️ " + time + " ms";
+
+  if(!bestTime || time < bestTime){
+    bestTime = time;
+    localStorage.setItem("bestReaction", time);
+    best.innerHTML = "🏆 Best: " + time + " ms";
+  }
+};
+</script>
+</body>
+</html>
