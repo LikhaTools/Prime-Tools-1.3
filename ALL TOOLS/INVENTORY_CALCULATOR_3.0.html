@@ -159,7 +159,7 @@ function compute(){
   const order=parse(holdEl.value,2,true)
   const shipped=parse(shippedEl.value,1,true)
   const rts=parse(rtsEl.value,2,false)
-  const supplier=parse(supplierEl.value,0,true)
+  const supplier = parse(supplierEl.value, 0, false, true)
 
   const items=new Set([...Object.keys(stock),...Object.keys(hold),...Object.keys(order)])
   const tbody=document.querySelector('#result tbody')
@@ -211,4 +211,5 @@ const stockEl=document.getElementById('stock'),
 
 </body>
 </html>
+
 
