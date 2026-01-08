@@ -138,6 +138,31 @@ tr:hover td { background: #f1f1f1; }
   .container { flex-direction: column; margin-left: 0; } 
   .left, .right { flex: 1 1 100%; min-width: 100%; }
 }
+
+.missing-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.missing-box {
+  flex: 1 1 45%;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.missing-box h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+
+.missing-box ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
 </style>
 </head>
 <body>
@@ -218,6 +243,8 @@ function processData() {
     // Missing items
     const missingPaste = namesToCheck.filter(n => !pageNames.some(p => p.toLowerCase() === n.toLowerCase()));
     const missingSheet = pageNames.filter(p => !namesToCheck.some(n => n.toLowerCase() === p.toLowerCase()));
+	missingSheet.sort((a, b) => a.localeCompare(b));
+
 
     // ===== Summary =====
     let summaryHtml = "<table>";
@@ -243,13 +270,38 @@ function processData() {
 
     // Missing section
     let missingHtml = "";
-    if(missingPaste.length || missingSheet.length){
-        missingHtml += "<div><h3>Missing</h3><ul>";
-        missingPaste.forEach(n => missingHtml += `<li>In Gsheet: ${n}</li>`);
-        missingSheet.forEach(p => missingHtml += `<li>In Website: ${p}</li>`);
-        missingHtml += "</ul></div>";
-    }
-    missingDiv.innerHTML = missingHtml;
+
+if (missingPaste.length || missingSheet.length) {
+    missingHtml += `<h3>Missing</h3>
+        <div class="missing-grid">
+
+            <div class="missing-box">
+                <h4>IN WEBSITE (${missingPaste.length})</h4>
+                <ul>
+                    ${
+                      missingPaste.length
+                        ? missingPaste.map(n => `<li>${n}</li>`).join("")
+                        : "<li>None 🎉</li>"
+                    }
+                </ul>
+            </div>
+
+            <div class="missing-box">
+                <h4>IN GSHEET (${missingSheet.length})</h4>
+                <ul>
+                    ${
+                      missingSheet.length
+                        ? missingSheet.map(p => `<li>${p}</li>`).join("")
+                        : "<li>None 🎉</li>"
+                    }
+                </ul>
+            </div>
+
+        </div>`;
+}
+
+missingDiv.innerHTML = missingHtml;
+
 
     // Match details - only show matches
     let html = "<table>";
