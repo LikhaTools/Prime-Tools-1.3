@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>📦 J&T Waybill Scanner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+
+<style>
+:root{
+  --bg:#f4f6f8;
+  --card:#fff;
+  --green:#16a34a;
+  --red:#dc2626;
+  --border:#e5e7eb;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:system-ui}
+.container{max-width:520px;margin:auto;padding:16px}
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
+h1{text-align:center;margin:0 0 12px;font-size:22px}
+input,button{
+  width:100%;
+  padding:12px;
+  font-size:16px;
+  border-radius:10px;
+  border:2px solid var(--border);
+}
+button{
+  margin-top:10px;
+  background:#111;
+  color:#fff;
+  cursor:pointer;
+}
+.result{margin-top:12px;font-size:22px;font-weight:700;text-align:center}
+.ok{color:var(--green)}
+.err{color:var(--red)}
+.history{margin-top:16px;border-top:1px solid var(--border);max-height:280px;overflow:auto}
+.row{font-size:14px;padding:6px;border-bottom:1px dashed var(--border)}
+.row.ok{color:var(--green)}
+.row.err{color:var(--red)}
+video{width:100%;margin-top:10px;border-radius:10px;display:none}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <div class="card">
+    <h1>📦 J&T Waybill Scanner</h1>
+
+    <!-- SCANNER INPUT -->
+    <input id="scanInput" autofocus placeholder="Scan J&T barcode">
+
+    <!-- CAMERA BUTTON -->
+    <button onclick="startCamera()">📷 Use Camera</button>
+    <video id="video"></video>
+
+    <div id="result" class="result"></div>
+    <div id="history" class="history"></div>
+  </div>
+</div>
+
+<script>
+const WEB_APP_URL="https://script.google.com/macros/s/AKfycbyBCOJi2U342godM49yKcdPGNw7x3DMMYTOsyN4Fo1hisYL53GiJN-u0OlVdVDbix8X/exec";
+const jntPattern=/^JT[0-9]{10,14}$/;
+
+const input=document.getElementById("scanInput");
+const result=document.getElementById("result");
+const historyBox=document.getElementById("history");
+const video=document.getElementById("video");
+
+const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+
+function beep(freq,dur,vol=1){
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type="square";o.frequency.value=freq;
+  g.gain.value=vol;
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start();o.stop(audioCtx.currentTime+dur);
+}
+
+function now(){return new Date().toLocaleString();}
+
+function upload(code,status){
+  fetch(WEB_APP_URL,{
+    method:"POST",
+    body:JSON.stringify({waybill:code,status,timestamp:now()})
+  }).catch(()=>{});
+}
+
+function limitHistory(){
+  const rows=historyBox.querySelectorAll(".row");
+  if(rows.length>10) rows[rows.length-1].remove();
+}
+
+/* 🔁 MAIN LOGIC (ISA LANG) */
+function processScan(val){
+  const time=now();
+  if(jntPattern.test(val)){
+    result.textContent="✔ VALID J&T WAYBILL";
+    result.className="result ok";
+    beep(900,0.08,0.2);
+
+    historyBox.innerHTML=
+      `<div class="row ok">✔ ${val} | ${time}</div>`+
+      historyBox.innerHTML;
+
+    upload(val,"VALID");
+  }else{
+    result.textContent="✖ INVALID / NOT J&T";
+    result.className="result err";
+    beep(180,0.5,1);
+    if(navigator.vibrate) navigator.vibrate([300,100,300]);
+
+    historyBox.innerHTML=
+      `<div class="row err">✖ ${val} | ${time}</div>`+
+      historyBox.innerHTML;
+
+    upload(val,"INVALID");
+  }
+  limitHistory();
+}
+
+/* 🔫 SCANNER (UNCHANGED BEHAVIOR) */
+input.addEventListener("change",()=>{
+  const val=input.value.trim().toUpperCase();
+  if(!val) return;
+  processScan(val);
+  input.value="";
+});
+
+/* 📷 CAMERA MODE */
+let stream, detector;
+
+async function startCamera(){
+  if(!("BarcodeDetector" in window)){
+    alert("Camera scan not supported. Use Chrome Android.");
+    return;
+  }
+
+  detector=new BarcodeDetector({formats:["code_128","qr_code"]});
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+  video.srcObject=stream;
+  video.style.display="block";
+  video.play();
+  scanLoop();
+}
+
+async function scanLoop(){
+  if(video.readyState===4){
+    const codes=await detector.detect(video);
+    if(codes.length){
+      stopCamera();
+      input.value=codes[0].rawValue.toUpperCase();
+      input.dispatchEvent(new Event("change"));
+      return;
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+function stopCamera(){
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  video.style.display="none";
+}
+</script>
+</body>
+</html>
