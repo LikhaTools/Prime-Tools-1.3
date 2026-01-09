@@ -19,7 +19,12 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);font-family:system-ui}
 .container{max-width:520px;margin:auto;padding:16px}
-.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
+.card{
+  background:#fff;
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 10px 25px rgba(0,0,0,.08)
+}
 h1{text-align:center;margin:0 0 12px;font-size:22px}
 input,button{
   width:100%;
@@ -34,14 +39,64 @@ button{
   color:#fff;
   cursor:pointer;
 }
-.result{margin-top:12px;font-size:22px;font-weight:700;text-align:center}
+.result{
+  margin-top:12px;
+  font-size:22px;
+  font-weight:700;
+  text-align:center
+}
 .ok{color:var(--green)}
 .err{color:var(--red)}
-.history{margin-top:16px;border-top:1px solid var(--border);max-height:280px;overflow:auto}
-.row{font-size:14px;padding:6px;border-bottom:1px dashed var(--border)}
+
+.history{
+  margin-top:16px;
+  border-top:1px solid var(--border);
+  max-height:280px;
+  overflow:auto
+}
+.row{
+  font-size:14px;
+  padding:6px;
+  border-bottom:1px dashed var(--border)
+}
 .row.ok{color:var(--green)}
 .row.err{color:var(--red)}
-video{width:100%;margin-top:10px;border-radius:10px;display:none}
+
+.camera-wrap{
+  position:relative;
+  margin-top:10px;
+}
+video{
+  width:100%;
+  border-radius:10px;
+  display:none;
+}
+.scan-guide{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:220px;
+  height:140px;
+  transform:translate(-50%,-50%);
+  border:3px solid rgba(0,255,0,.85);
+  border-radius:12px;
+  box-shadow:0 0 0 2000px rgba(0,0,0,.35);
+  pointer-events:none;
+}
+.scan-line{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:3px;
+  background:#00ff88;
+  animation:scanline 2s linear infinite;
+}
+@keyframes scanline{
+  0%{top:0}
+  50%{top:calc(100% - 3px)}
+  100%{top:0}
+}
 </style>
 </head>
 
@@ -50,12 +105,19 @@ video{width:100%;margin-top:10px;border-radius:10px;display:none}
   <div class="card">
     <h1>📦 J&T Waybill Scanner</h1>
 
-    <!-- SCANNER INPUT -->
+    <!-- SCANNER GUN INPUT -->
     <input id="scanInput" autofocus placeholder="Scan J&T barcode">
 
     <!-- CAMERA BUTTON -->
     <button onclick="startCamera()">📷 Use Camera</button>
-    <video id="video"></video>
+
+    <!-- CAMERA VIEW -->
+    <div class="camera-wrap">
+      <video id="video"></video>
+      <div class="scan-guide" id="guide" style="display:none">
+        <div class="scan-line"></div>
+      </div>
+    </div>
 
     <div id="result" class="result"></div>
     <div id="history" class="history"></div>
@@ -70,19 +132,24 @@ const input=document.getElementById("scanInput");
 const result=document.getElementById("result");
 const historyBox=document.getElementById("history");
 const video=document.getElementById("video");
+const guide=document.getElementById("guide");
 
 const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
 
+/* 🔊 SOUND */
 function beep(freq,dur,vol=1){
   const o=audioCtx.createOscillator();
   const g=audioCtx.createGain();
-  o.type="square";o.frequency.value=freq;
+  o.type="square";
+  o.frequency.value=freq;
   g.gain.value=vol;
-  o.connect(g);g.connect(audioCtx.destination);
-  o.start();o.stop(audioCtx.currentTime+dur);
+  o.connect(g);
+  g.connect(audioCtx.destination);
+  o.start();
+  o.stop(audioCtx.currentTime+dur);
 }
 
-function now(){return new Date().toLocaleString();}
+function now(){ return new Date().toLocaleString(); }
 
 function upload(code,status){
   fetch(WEB_APP_URL,{
@@ -99,6 +166,7 @@ function limitHistory(){
 /* 🔁 MAIN LOGIC (ISA LANG) */
 function processScan(val){
   const time=now();
+
   if(jntPattern.test(val)){
     result.textContent="✔ VALID J&T WAYBILL";
     result.className="result ok";
@@ -121,10 +189,11 @@ function processScan(val){
 
     upload(val,"INVALID");
   }
+
   limitHistory();
 }
 
-/* 🔫 SCANNER (UNCHANGED BEHAVIOR) */
+/* 🔫 SCANNER GUN */
 input.addEventListener("change",()=>{
   const val=input.value.trim().toUpperCase();
   if(!val) return;
@@ -132,8 +201,11 @@ input.addEventListener("change",()=>{
   input.value="";
 });
 
-/* 📷 CAMERA MODE */
+/* 📷 CONTINUOUS CAMERA MODE */
 let stream, detector;
+let lastCameraScan="";
+let lastScanTime=0;
+const SCAN_DELAY=1500;
 
 async function startCamera(){
   if(!("BarcodeDetector" in window)){
@@ -141,11 +213,26 @@ async function startCamera(){
     return;
   }
 
-  detector=new BarcodeDetector({formats:["code_128","qr_code"]});
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+  detector=new BarcodeDetector({
+    formats:[
+      "code_128",
+      "qr_code",
+      "ean_13",
+      "ean_8",
+      "upc_a",
+      "upc_e"
+    ]
+  });
+
+  stream=await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:"environment"}
+  });
+
   video.srcObject=stream;
   video.style.display="block";
+  guide.style.display="block";
   video.play();
+
   scanLoop();
 }
 
@@ -153,18 +240,17 @@ async function scanLoop(){
   if(video.readyState===4){
     const codes=await detector.detect(video);
     if(codes.length){
-      stopCamera();
-      input.value=codes[0].rawValue.toUpperCase();
-      input.dispatchEvent(new Event("change"));
-      return;
+      const code=codes[0].rawValue.toUpperCase();
+      const nowTime=Date.now();
+
+      if(code!==lastCameraScan || nowTime-lastScanTime>SCAN_DELAY){
+        lastCameraScan=code;
+        lastScanTime=nowTime;
+        processScan(code);
+      }
     }
   }
   requestAnimationFrame(scanLoop);
-}
-
-function stopCamera(){
-  if(stream) stream.getTracks().forEach(t=>t.stop());
-  video.style.display="none";
 }
 </script>
 </body>
