@@ -8,7 +8,7 @@
       --bg:#f4f6f8;
       --card:#ffffff;
       --muted:#64748b;
-      --border:#3b82f6; /* blue accent */
+      --border:#3b82f6;
       --primary:#3b82f6;
       --primary-weak:#e8efff;
       --success:#16a34a;
@@ -20,15 +20,7 @@
     h2 { margin-top:14px; font-size:13px; color:var(--muted) }
 
     .app { display:grid; grid-template-columns: 32% 68%; height:100vh }
-
-    .left { 
-  background:var(--card); 
-  padding:16px 16px 16px 40px; /* top/right/bottom/left => left doubled */
-  overflow:auto; 
-  border-right:1px solid #e5e7eb; 
-  border-radius:12px 0 0 12px 
-}
-
+    .left { background:var(--card); padding:16px 16px 16px 40px; overflow:auto; border-right:1px solid #e5e7eb; border-radius:12px 0 0 12px }
     .right { padding:20px; overflow:auto; background:var(--card); border-radius:0 12px 12px 0 }
 
     textarea { width:100%; height:110px; padding:10px; font-size:13px; margin-top:6px; border:1px solid #e5e7eb; border-radius:8px; resize:vertical; font-family: monospace }
@@ -46,7 +38,6 @@
     th, td { border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:13px; word-wrap: break-word }
     th { background:#f3f4f6; color:var(--muted) }
     tr:last-child td{ border-bottom:none }
-
   </style>
 </head>
 <body>
@@ -69,7 +60,6 @@
 
   <div class="right">
     <h1>📊 RESULT</h1>
-
     <div class="copy-tables">
       <div>
         <button class="btn ghost" onclick="copyText('stockCopy')">📋 COPY STOCK</button>
@@ -80,7 +70,6 @@
         <textarea id="restockCopy" readonly></textarea>
       </div>
     </div>
-
     <table id="result" style="display:none">
       <thead>
         <tr>
@@ -96,7 +85,7 @@
 
 <script>
 /* ================= CONFIG ================= */
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzGelrmzNyfSczfoTFw7M0029vISORBEyqRf9w8q0H-Nr4IVX0RD3aD-mOXoxtM3QDxYA/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbya0HoYzb5zlm8s_IBw8eceEEgEnEY4q6UEviNcQI06gqtxn1F4QOmjIIk0tNqvoRj-Ng/exec";
 
 /* ================= HELPERS ================= */
 function pcs(item){ const m=item.match(/^(\d+)\s*x/i); return m?Number(m[1]):1 }
@@ -146,7 +135,31 @@ function extractHoldUpload(){
     if(!l.trim()) return
     const p=l.split(/\t+/)
     if(p.length<2) return
-    out.push({ item: clean(p[0]), qty: Number(p[1].trim()) })
+    // MULTIPLY + CLEAN
+    out.push({ item: clean(p[0]), qty: Number(p[1].trim()) * pcs(p[0]) })
+  })
+  return out
+}
+
+// NEW: RAW HOLD_UPLOAD_2 (no multiply, no clean)
+function extractHoldUploadRaw(){
+  const out=[]
+  holdEl.value.split('\n').forEach(l=>{
+    if(!l.trim()) return
+    const p=l.split(/\t+/)
+    if(p.length<2) return
+    out.push({ item: p[0].trim(), qty: Number(p[1].trim()) })
+  })
+  return out
+}
+
+function extractShippedUpload(){
+  const out=[]
+  shippedEl.value.split('\n').forEach(l=>{
+    if(!l.trim()) return
+    const p=l.split(/\t+/)
+    if(p.length<2) return
+    out.push({ item: p[0].trim(), qty: Number(p[1].trim()) })
   })
   return out
 }
@@ -159,7 +172,7 @@ function compute(){
   const order=parse(holdEl.value,2,true)
   const shipped=parse(shippedEl.value,1,true)
   const rts=parse(rtsEl.value,2,false)
-  const supplier = parse(supplierEl.value, 0, false, true)
+  const supplier = parse(supplierEl.value,0,false,true)
 
   const items=new Set([...Object.keys(stock),...Object.keys(hold),...Object.keys(order)])
   const tbody=document.querySelector('#result tbody')
@@ -185,9 +198,11 @@ function compute(){
     method:'POST',
     mode:'no-cors',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      stock: extractStockUpload(),
-      hold: extractHoldUpload()
+    body: JSON.stringify({
+      stock: extractStockUpload(),       // STOCK_UPLOAD
+      hold: extractHoldUpload(),         // HOLD_UPLOAD (MULTIPLY + CLEAN)
+      hold_raw: extractHoldUploadRaw(),  // HOLD_UPLOAD_2 (RAW)
+      shipped: extractShippedUpload()    // SHIPPED_UPLOAD
     })
   })
 }
@@ -199,6 +214,7 @@ function copyText(id){
   document.execCommand('copy')
 }
 
+/* ================= ELEMENTS ================= */
 const stockEl=document.getElementById('stock'),
       holdEl=document.getElementById('hold'),
       shippedEl=document.getElementById('shipped'),
@@ -211,5 +227,3 @@ const stockEl=document.getElementById('stock'),
 
 </body>
 </html>
-
-
