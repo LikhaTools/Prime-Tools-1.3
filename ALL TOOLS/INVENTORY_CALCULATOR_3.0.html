@@ -161,8 +161,7 @@ function extractShippedUpload(){
     if(!l.trim()) return
     const p=l.split(/\t+/)
     if(p.length<2) return
-    const multiplier = pcs(p[0])
-    const qty = Number(p[1].trim().replace(/,/g,'')) * multiplier
+    const qty = Number(p[1].trim().replace(/,/g,'')) // no multiply
     out.push({ item: p[0].trim(), qty: qty })
   })
   return out
