@@ -22,15 +22,12 @@
 body{
   margin:0;
   padding:24px;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family:'Segoe UI',system-ui,sans-serif;
   background:var(--bg);
   color:var(--text);
 }
 
-h2{
-  margin-top:0;
-  text-align:center;
-}
+h2{ margin-top:0; text-align:center; }
 
 .container{
   display:grid;
@@ -42,7 +39,7 @@ h2{
   background:var(--card);
   border-radius:14px;
   padding:18px;
-  box-shadow:0 8px 25px rgba(0,0,0,0.06);
+  box-shadow:0 8px 25px rgba(0,0,0,.06);
 }
 
 /* LEFT */
@@ -72,7 +69,14 @@ button{
 }
 button:hover{
   transform:translateY(-2px);
-  box-shadow:0 8px 20px rgba(0,0,0,0.15);
+  box-shadow:0 8px 20px rgba(0,0,0,.15);
+}
+
+.copy-btn{
+  background:#16a34a;
+}
+.copy-btn:hover{
+  background:#15803d;
 }
 
 .status{
@@ -92,8 +96,16 @@ button:hover{
   border-radius:50%;
   animation:spin 1s linear infinite;
 }
-@keyframes spin{
-  to{ transform:rotate(360deg); }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+#reportSummary{
+  margin-top:14px;
+  font-size:13px;
+  white-space:pre-wrap;
+  background:#f8fafc;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #e2e8f0;
 }
 
 /* RIGHT */
@@ -127,15 +139,8 @@ button:hover{
 .badge.red{ background:#fee2e2; color:#7f1d1d; }
 .badge.yellow{ background:#fef9c3; color:#854d0e; }
 
-.page-body{
-  display:none;
-  padding:12px 16px;
-  background:#ffffff;
-}
-
-.page-card.open .page-body{
-  display:block;
-}
+.page-body{ display:none; padding:12px 16px; }
+.page-card.open .page-body{ display:block; }
 
 table{
   width:100%;
@@ -160,9 +165,7 @@ tr.found{ background:#dcfce7; }
   background:#2563eb;
   color:#fff;
 }
-.toggle-found-btn:hover{
-  background:#1e40af;
-}
+.toggle-found-btn:hover{ background:#1e40af; }
 
 @media(max-width:900px){
   .container{ grid-template-columns:1fr; }
@@ -187,6 +190,10 @@ tr.found{ background:#dcfce7; }
       <span id="loader" style="display:none" class="loader"></span>
       <span id="status" class="status loading">Connecting…</span>
     </button>
+
+    <button class="copy-btn" onclick="copySummary()">COPY SUMMARY</button>
+
+    <pre id="reportSummary"></pre>
   </div>
 
   <!-- RIGHT -->
@@ -198,24 +205,23 @@ tr.found{ background:#dcfce7; }
 </div>
 
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwMf1vVIX5b7PI-0hOL62AFT2AZ2qObIDg4MDHIrekxHQEqT5AzBVyOMNchY4zKTV8yJg/exec";
-let sheetPairs = [];
-let loading = false;
+const WEB_APP_URL="https://script.google.com/macros/s/AKfycbwMf1vVIX5b7PI-0hOL62AFT2AZ2qObIDg4MDHIrekxHQEqT5AzBVyOMNchY4zKTV8yJg/exec";
+let sheetPairs=[];
+let loading=false;
 
 async function fetchSheet(){
-  const status = document.getElementById("status");
+  const status=document.getElementById("status");
   try{
-    const res = await fetch(WEB_APP_URL);
-    sheetPairs = await res.json();
-    status.textContent = "GSheet Ready";
-    status.className = "status success";
+    const res=await fetch(WEB_APP_URL);
+    sheetPairs=await res.json();
+    status.textContent="GSheet Ready";
+    status.className="status success";
   }catch{
-    status.textContent = "GSheet Error";
-    status.className = "status error";
+    status.textContent="GSheet Error";
+    status.className="status error";
     sheetPairs=[];
   }
 }
-
 fetchSheet();
 
 function process(){
@@ -223,18 +229,14 @@ function process(){
   loading=true;
   document.getElementById("loader").style.display="inline-block";
   document.getElementById("btnText").textContent="Checking…";
-
-  setTimeout(runLogic, 300);
+  setTimeout(runLogic,300);
 }
 
 function runLogic(){
-  const raw = document.getElementById("input").value.trim();
-  if(!raw){
-    loadingDone();
-    return;
-  }
+  const raw=document.getElementById("input").value.trim();
+  if(!raw){ loadingDone(); return; }
 
-  const websiteCount = {};
+  const websiteCount={};
   raw.split("\n").forEach(l=>{
     const [p,c]=l.split("\t").map(v=>v?.trim());
     if(!p||!c) return;
@@ -242,29 +244,66 @@ function runLogic(){
     websiteCount[k]=(websiteCount[k]||0)+1;
   });
 
-  const sheetCount = {};
+  const sheetCount={};
   sheetPairs.forEach(k=>{
     sheetCount[k]=(sheetCount[k]||0)+1;
   });
 
   const pages={};
-
   Object.keys({...websiteCount,...sheetCount}).forEach(k=>{
     const [p,c]=k.split("|||");
     pages[p] ??= [];
-    pages[p].push({page:p,customer:c,website: websiteCount[k]||0,gsheet: sheetCount[k]||0});
+    pages[p].push({
+      page:p,
+      customer:c,
+      website:websiteCount[k]||0,
+      gsheet:sheetCount[k]||0
+    });
   });
+
+  /* ===== REPORT SUMMARY ===== */
+  const reportDate=new Date().toLocaleDateString("en-US",{
+    year:"numeric",month:"long",day:"2-digit"
+  });
+
+  let websiteTotal=0;
+  Object.values(websiteCount).forEach(v=>websiteTotal+=v);
+
+  let gsheetTotal=sheetPairs.length;
+
+  let report=`${reportDate}
+Total Orders from Likha Website - ${websiteTotal}
+Total Orders from Likha Gsheet - ${gsheetTotal}
+`;
 
   let html="";
 
   Object.entries(pages).forEach(([page,rows])=>{
     let miss=0,dup=0,found=0;
+    let pageReport=`\n${page}\n`;
+    let hasIssue=false;
 
     rows.forEach(r=>{
-      if(r.website===0||r.gsheet===0) miss++;
-      if(r.website>1||r.gsheet>1) dup++;
-      if(r.website>0&&r.gsheet>0) found++;
+      const w=r.website,g=r.gsheet;
+
+      if(w===0||g===0) miss++;
+      if(w>1||g>1) dup++;
+      if(w>0&&g>0) found++;
+
+      // SUMMARY RULES
+      if(w>1 && g>1) return;
+
+      if(w!==g || w>1 || g>1){
+        hasIssue=true;
+        pageReport+=`\n${r.customer}\n`;
+        pageReport+=`WEBSITE:${w} | GSheet:${g} MATCH`;
+        if(g>1 && w<=1) pageReport+=` - DUPLICATE (GSHEET: ${g})`;
+        if(w>1 && g<=1) pageReport+=` - DUPLICATE (WEBSITE: ${w})`;
+        pageReport+="\n";
+      }
     });
+
+    if(hasIssue) report+=pageReport;
 
     const headerColor = miss>0 ? "red" : dup>0 ? "yellow" : "green";
 
@@ -289,37 +328,44 @@ function runLogic(){
       <div class="page-body">
         <button class="toggle-found-btn" onclick="
           const rows=this.parentElement.querySelectorAll('tr.found');
-          rows.forEach(r=>r.style.display = r.style.display==='none'?'table-row':'none');
-          this.textContent = this.textContent.includes('Show')?'Hide Found':'Show Found';
+          rows.forEach(r=>r.style.display=r.style.display==='none'?'table-row':'none');
+          this.textContent=this.textContent.includes('Show')?'Hide Found':'Show Found';
         ">Show Found</button>
 
         <table>
           <tr><th>Customer</th><th>Status</th></tr>
           ${rows.map(r=>{
-            let cls="found",txt="FOUND", hideFound='';
+            let cls="found",txt="FOUND",hide='';
             if(r.website===0||r.gsheet===0){
               cls="missing";
               txt=`MISSING (${r.website===0?'Missing in WEBSITE':'Missing in GSheet'})`;
             }
             if(r.website>1||r.gsheet>1){
               cls="duplicate";
-              let w = r.website>1?r.website:0;
-              let g = r.gsheet>1?r.gsheet:0;
+              let w=r.website>1?r.website:0;
+              let g=r.gsheet>1?r.gsheet:0;
               if(w&&g) txt=`DUPLICATE (WEBSITE: ${w} / GSHEET: ${g})`;
               else if(w) txt=`DUPLICATE (WEBSITE: ${w})`;
               else if(g) txt=`DUPLICATE (GSHEET: ${g})`;
-              cls="duplicate";
             }
-            if(cls==='found'){ hideFound='style="display:none;"'; }
-            return `<tr class="${cls}" ${hideFound}><td>${r.customer}</td><td>${txt}</td></tr>`;
+            if(cls==='found') hide='style="display:none"';
+            return `<tr class="${cls}" ${hide}><td>${r.customer}</td><td>${txt}</td></tr>`;
           }).join("")}
         </table>
       </div>
     </div>`;
   });
 
-  document.getElementById("result").innerHTML = html;
+  document.getElementById("result").innerHTML=html;
+  document.getElementById("reportSummary").innerText=report.trim();
   loadingDone();
+}
+
+function copySummary(){
+  const t=document.getElementById("reportSummary").innerText;
+  if(!t) return alert("No summary to copy");
+  navigator.clipboard.writeText(t);
+  alert("Summary copied ✔");
 }
 
 function loadingDone(){
