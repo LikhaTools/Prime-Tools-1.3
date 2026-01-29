@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Order Checker 2.1</title>
+<title>Order Checker</title>
 
 <style>
 :root{
@@ -22,12 +22,15 @@
 body{
   margin:0;
   padding:24px;
-  font-family:'Segoe UI', system-ui, sans-serif;
+  font-family: 'Segoe UI', system-ui, sans-serif;
   background:var(--bg);
   color:var(--text);
 }
 
-h2{ text-align:center; margin-top:0; }
+h2{
+  margin-top:0;
+  text-align:center;
+}
 
 .container{
   display:grid;
@@ -42,6 +45,7 @@ h2{ text-align:center; margin-top:0; }
   box-shadow:0 8px 25px rgba(0,0,0,0.06);
 }
 
+/* LEFT */
 textarea{
   width:100%;
   height:240px;
@@ -91,8 +95,11 @@ button:hover{
   border-radius:50%;
   animation:spin 1s linear infinite;
 }
-@keyframes spin{ to{ transform:rotate(360deg); } }
+@keyframes spin{
+  to{ transform:rotate(360deg); }
+}
 
+/* RIGHT */
 .page-card{
   border-radius:12px;
   border:1px solid #e2e8f0;
@@ -123,8 +130,15 @@ button:hover{
 .badge.red{ background:#fee2e2; color:#7f1d1d; }
 .badge.yellow{ background:#fef9c3; color:#854d0e; }
 
-.page-body{ display:none; padding:12px 16px; }
-.page-card.open .page-body{ display:block; }
+.page-body{
+  display:none;
+  padding:12px 16px;
+  background:#ffffff;
+}
+
+.page-card.open .page-body{
+  display:block;
+}
 
 table{
   width:100%;
@@ -149,6 +163,9 @@ tr.found{ background:#dcfce7; }
   background:#2563eb;
   color:#fff;
 }
+.toggle-found-btn:hover{
+  background:#1e40af;
+}
 
 pre{
   margin-top:12px;
@@ -168,51 +185,53 @@ pre{
 
 <body>
 
-<h2>📊 ORDER CHECKER 2.1</h2>
+<h2>📊 ORDER CHECKER</h2>
 
 <div class="container">
 
-<div class="card">
-  <h3>Website Data</h3>
-  <small>Format: Page Name[TAB]Customer Name</small>
-  <textarea id="input"></textarea>
+  <!-- LEFT -->
+  <div class="card">
+    <h3>Website Data</h3>
+    <small>Format: Page Name[TAB]Customer Name</small>
+    <textarea id="input"></textarea>
 
-  <button onclick="process()">
-    <span id="btnText">CHECK</span>
-    <span id="loader" style="display:none" class="loader"></span>
-    <span id="status" class="status loading">Connecting…</span>
-  </button>
+    <button onclick="process()">
+      <span id="btnText">CHECK</span>
+      <span id="loader" style="display:none" class="loader"></span>
+      <span id="status" class="status loading">Connecting…</span>
+    </button>
 
-  <button class="copy-btn" onclick="copySummary()">COPY SUMMARY</button>
+    <button class="copy-btn" onclick="copySummary()">COPY SUMMARY</button>
+    <pre id="reportSummary"></pre>
+  </div>
 
-  <pre id="reportSummary"></pre>
-</div>
-
-<div class="card">
-  <h3>Results</h3>
-  <div id="result">Waiting for input…</div>
-</div>
+  <!-- RIGHT -->
+  <div class="card">
+    <h3>Results</h3>
+    <div id="result">Waiting for input…</div>
+  </div>
 
 </div>
 
 <script>
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwMf1vVIX5b7PI-0hOL62AFT2AZ2qObIDg4MDHIrekxHQEqT5AzBVyOMNchY4zKTV8yJg/exec";
-let sheetPairs=[];
-let loading=false;
+let sheetPairs = [];
+let loading = false;
 
 async function fetchSheet(){
-  const status=document.getElementById("status");
+  const status = document.getElementById("status");
   try{
-    const res=await fetch(WEB_APP_URL);
-    sheetPairs=await res.json();
-    status.textContent="GSheet Ready";
-    status.className="status success";
+    const res = await fetch(WEB_APP_URL);
+    sheetPairs = await res.json();
+    status.textContent = "GSheet Ready";
+    status.className = "status success";
   }catch{
-    status.textContent="GSheet Error";
-    status.className="status error";
+    status.textContent = "GSheet Error";
+    status.className = "status error";
     sheetPairs=[];
   }
 }
+
 fetchSheet();
 
 function process(){
@@ -220,14 +239,18 @@ function process(){
   loading=true;
   document.getElementById("loader").style.display="inline-block";
   document.getElementById("btnText").textContent="Checking…";
-  setTimeout(runLogic,300);
+
+  setTimeout(runLogic, 300);
 }
 
 function runLogic(){
-  const raw=document.getElementById("input").value.trim();
-  if(!raw){ loadingDone(); return; }
+  const raw = document.getElementById("input").value.trim();
+  if(!raw){
+    loadingDone();
+    return;
+  }
 
-  const websiteCount={};
+  const websiteCount = {};
   raw.split("\n").forEach(l=>{
     const [p,c]=l.split("\t").map(v=>v?.trim());
     if(!p||!c) return;
@@ -235,47 +258,42 @@ function runLogic(){
     websiteCount[k]=(websiteCount[k]||0)+1;
   });
 
-  const sheetCount={};
+  const sheetCount = {};
   sheetPairs.forEach(k=>{
     sheetCount[k]=(sheetCount[k]||0)+1;
   });
 
   const pages={};
+
   Object.keys({...websiteCount,...sheetCount}).forEach(k=>{
     const [p,c]=k.split("|||");
-    pages[p]??=[];
-    pages[p].push({
-      page:p,
-      customer:c,
-      website:websiteCount[k]||0,
-      gsheet:sheetCount[k]||0
-    });
+    pages[p] ??= [];
+    pages[p].push({page:p,customer:c,website: websiteCount[k]||0,gsheet: sheetCount[k]||0});
   });
 
-  /* YESTERDAY DATE */
-  const d=new Date();
-  d.setDate(d.getDate()-1);
-  const reportDate=d.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"2-digit"});
+  // === Summary Prep ===
+  const d = new Date();
+  d.setDate(d.getDate()-1); // yesterday
+  const reportDate = d.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"2-digit"});
 
-  let websiteTotal=Object.values(websiteCount).reduce((a,b)=>a+b,0);
-  let gsheetTotal=sheetPairs.length;
+  let totalWebsite = Object.values(websiteCount).reduce((a,b)=>a+b,0);
+  let totalGsheet = sheetPairs.length;
 
-  let report=`${reportDate}
-Total Orders from Likha Website - ${websiteTotal}
-Total Orders from Likha Gsheet - ${gsheetTotal}
+  let summaryText = `${reportDate}
+Total Orders from Likha Website - ${totalWebsite}
+Total Orders from Likha Gsheet - ${totalGsheet}
 `;
 
   let html="";
 
   Object.entries(pages).forEach(([page,rows])=>{
     let miss=0,dup=0,found=0;
-    let pageReport=`\n${page}\n`;
-    let hasIssue=false;
+    let pageReport = ``;
 
     rows.forEach(r=>{
-      const w=r.website, g=r.gsheet;
-
-      if(w>1 && g>1) return;
+      const w = r.website;
+      const g = r.gsheet;
+      if(w>1 && g>1) return; // skip if duplicate in both
 
       let status="";
       if(w===0 && g>0){ status="MISSING (WEBSITE)"; miss++; }
@@ -285,14 +303,17 @@ Total Orders from Likha Gsheet - ${gsheetTotal}
       else if(w===1 && g===1){ status="MATCH"; found++; }
 
       if(status!=="MATCH"){
-        hasIssue=true;
-        pageReport+=`\n${r.customer}\nWEBSITE:${w} | GSheet:${g} ${status}\n`;
+        pageReport += `- ${r.customer}: ${status}\n`;
       }
     });
 
-    if(hasIssue) report+=pageReport;
+    // Only add to summary if there’s missing or duplicate
+    if(miss>0 || dup>0){
+      summaryText += `\n> ${page}\nWEBSITE:${rows.reduce((a,b)=>a+b.website,0)} | GSheet:${rows.reduce((a,b)=>a+b.gsheet,0)}\n${pageReport}`;
+    }
 
-    const headerColor=miss>0?"red":dup>0?"yellow":"green";
+    // === Right side HTML ===
+    const headerColor = miss>0 ? "red" : dup>0 ? "yellow" : "green";
 
     html+=`
     <div class="page-card">
@@ -321,15 +342,20 @@ Total Orders from Likha Gsheet - ${gsheetTotal}
         <table>
           <tr><th>Customer</th><th>Status</th></tr>
           ${rows.map(r=>{
-            let cls="found",txt="FOUND",hideFound="";
+            let cls="found",txt="FOUND", hideFound='';
             if(r.website===0||r.gsheet===0){
               cls="missing";
-              txt=`MISSING (${r.website===0?"WEBSITE":"GSHEET"})`;
-            }else if(r.website>1||r.gsheet>1){
-              cls="duplicate";
-              txt=`DUPLICATE`;
+              txt=`MISSING (${r.website===0?'WEBSITE':'GSHEET'})`;
             }
-            if(cls==='found') hideFound='style="display:none;"';
+            if(r.website>1||r.gsheet>1){
+              cls="duplicate";
+              let w = r.website>1?r.website:0;
+              let g = r.gsheet>1?r.gsheet:0;
+              if(w&&g) txt=`DUPLICATE (WEBSITE: ${w} / GSHEET: ${g})`;
+              else if(w) txt=`DUPLICATE (WEBSITE: ${w})`;
+              else if(g) txt=`DUPLICATE (GSHEET: ${g})`;
+            }
+            if(cls==='found'){ hideFound='style="display:none;"'; }
             return `<tr class="${cls}" ${hideFound}><td>${r.customer}</td><td>${txt}</td></tr>`;
           }).join("")}
         </table>
@@ -337,8 +363,8 @@ Total Orders from Likha Gsheet - ${gsheetTotal}
     </div>`;
   });
 
-  document.getElementById("result").innerHTML=html;
-  document.getElementById("reportSummary").innerText=report.trim();
+  document.getElementById("result").innerHTML = html;
+  document.getElementById("reportSummary").innerText = summaryText.trim();
   loadingDone();
 }
 
@@ -349,10 +375,10 @@ function loadingDone(){
 }
 
 function copySummary(){
-  const t=document.getElementById("reportSummary").innerText;
-  if(!t) return alert("No summary");
+  const t = document.getElementById("reportSummary").innerText;
+  if(!t) return alert("No summary available");
   navigator.clipboard.writeText(t);
-  alert("Summary copied");
+  alert("Summary copied!");
 }
 </script>
 
