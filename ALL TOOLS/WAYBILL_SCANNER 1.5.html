@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>📦 J&T Waybill Scanner</title>
+<title>📦 J&T Waybill Scanner 1.6</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -101,7 +101,7 @@ video{
   border-radius:12px;
   pointer-events:none;
   display:none;
-  box-shadow:none; /* REMOVE DARKNESS */
+  box-shadow:none;
 }
 .scan-line{
   position:absolute;
@@ -123,7 +123,7 @@ video{
 <body>
 <div class="container">
   <div class="card">
-    <h1>📦 J&T Waybill Scanner 1.5</h1>
+    <h1>📦 J&T Waybill Scanner 1.6</h1>
 
     <div id="bigWaybill"></div>
 
@@ -175,22 +175,25 @@ const CAM_DELAY = 1500;
 /* ================= HELPERS ================= */
 function beep(freq,dur){
   const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  g.gain.value = 1.2; // louder
   o.frequency.value = freq;
-  o.connect(audioCtx.destination);
+  o.connect(g);
+  g.connect(audioCtx.destination);
   o.start();
   o.stop(audioCtx.currentTime + dur);
 }
 
-function flash(color){
-  document.body.style.background = color; // solid
+function flash(bgColor, textColor="#fff"){
+  document.body.style.background = bgColor;
+  bigWaybill.style.color = textColor;
   setTimeout(()=>{
-    document.body.style.background = "#f4f6f8"; // default bg
-  },250); // 250ms solid flash
+    document.body.style.background = "#f4f6f8";
+    bigWaybill.style.color = "#000";
+  },250);
 }
 
-function now(){
-  return new Date().toLocaleString();
-}
+function now(){ return new Date().toLocaleString(); }
 
 function upload(code,status){
   fetch(WEB_APP_URL,{
@@ -220,9 +223,8 @@ function processScan(val){
   if(!jntPattern.test(val)){
     result.textContent = "✖ INVALID WAYBILL";
     result.className = "result err";
-    bigWaybill.style.color = "#fff";
-    flash("#dc2626"); // solid red
-    beep(300,0.3);
+    flash("#dc2626","#fff");
+    beep(300,0.35);
     addHistory(`✖ ${val} | ${now()}`,"err");
     upload(val,"INVALID");
     return;
@@ -232,8 +234,7 @@ function processScan(val){
   if(scannedSet.has(val)){
     result.textContent = "⚠ DUPLICATE";
     result.className = "result warn";
-    bigWaybill.style.color = "#fff";
-    flash("#f59e0b"); // solid yellow
+    flash("#f59e0b","#000");
     beep(600,0.15); beep(600,0.15);
     addHistory(`⚠ DUPLICATE ${val} | ${now()}`,"warn");
     upload(val,"DUPLICATE");
@@ -246,10 +247,8 @@ function processScan(val){
 
   result.textContent = "✔ VALID J&T WAYBILL";
   result.className = "result ok";
-  bigWaybill.style.color = "#fff";
-  flash("#16a34a"); // solid green
+  flash("#16a34a","#fff");
   beep(900,0.15);
-
   addHistory(`✔ ${val} | ${now()}`,"ok");
   upload(val,"VALID");
 }
@@ -290,7 +289,7 @@ async function startCamera(){
 }
 
 async function scanLoop(){
-  if(video.readyState === 4){
+  if(video.readyState === 4 && detector){
     const codes = await detector.detect(video);
     if(codes.length){
       const code = codes[0].rawValue.toUpperCase();
@@ -307,6 +306,3 @@ async function scanLoop(){
 </script>
 </body>
 </html>
-
-
-
