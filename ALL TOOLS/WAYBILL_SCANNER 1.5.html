@@ -182,8 +182,10 @@ function beep(freq,dur){
 }
 
 function flash(color){
-  document.body.style.background = color;
-  setTimeout(()=>document.body.style.background="",180);
+  document.body.style.background = color; // solid
+  setTimeout(()=>{
+    document.body.style.background = "#f4f6f8"; // default bg
+  },250); // 250ms solid flash
 }
 
 function now(){
@@ -218,9 +220,9 @@ function processScan(val){
   if(!jntPattern.test(val)){
     result.textContent = "✖ INVALID WAYBILL";
     result.className = "result err";
-    bigWaybill.style.color = "var(--red)";
-    flash("#fee2e2");
-    beep(200,0.5);
+    bigWaybill.style.color = "#fff";
+    flash("#dc2626"); // solid red
+    beep(300,0.3);
     addHistory(`✖ ${val} | ${now()}`,"err");
     upload(val,"INVALID");
     return;
@@ -230,9 +232,9 @@ function processScan(val){
   if(scannedSet.has(val)){
     result.textContent = "⚠ DUPLICATE";
     result.className = "result warn";
-    bigWaybill.style.color = "var(--yellow)";
-    flash("#fef3c7");
-    beep(600,0.1); beep(600,0.1);
+    bigWaybill.style.color = "#fff";
+    flash("#f59e0b"); // solid yellow
+    beep(600,0.15); beep(600,0.15);
     addHistory(`⚠ DUPLICATE ${val} | ${now()}`,"warn");
     upload(val,"DUPLICATE");
     return;
@@ -244,9 +246,9 @@ function processScan(val){
 
   result.textContent = "✔ VALID J&T WAYBILL";
   result.className = "result ok";
-  bigWaybill.style.color = "var(--green)";
-  flash("#dcfce7");
-  beep(900,0.1);
+  bigWaybill.style.color = "#fff";
+  flash("#16a34a"); // solid green
+  beep(900,0.15);
 
   addHistory(`✔ ${val} | ${now()}`,"ok");
   upload(val,"VALID");
@@ -305,5 +307,6 @@ async function scanLoop(){
 </script>
 </body>
 </html>
+
 
 
