@@ -99,9 +99,9 @@ video{
   transform:translate(-50%,-50%);
   border:3px solid rgba(0,255,0,.8);
   border-radius:12px;
-  box-shadow:0 0 0 2000px rgba(0,0,0,.35);
   pointer-events:none;
   display:none;
+  box-shadow:none; /* REMOVE DARKNESS */
 }
 .scan-line{
   position:absolute;
@@ -305,4 +305,5 @@ async function scanLoop(){
 </script>
 </body>
 </html>
+
 
