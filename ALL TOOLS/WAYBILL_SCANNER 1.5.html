@@ -10,42 +10,113 @@
   --bg:#f4f6f8;
   --green:#16a34a;
   --red:#dc2626;
+  --yellow:#f59e0b;
   --border:#e5e7eb;
 }
-body{margin:0;background:var(--bg);font-family:system-ui}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  font-family:system-ui;
+  transition:background .15s;
+}
 .container{max-width:520px;margin:auto;padding:16px}
 .card{
   background:#fff;
-  border-radius:14px;
+  border-radius:16px;
   padding:20px;
   box-shadow:0 10px 25px rgba(0,0,0,.08)
 }
-h1{text-align:center}
-input{
+h1{text-align:center;margin:0 0 10px}
+
+#bigWaybill{
+  font-size:28px;
+  font-weight:900;
+  text-align:center;
+  margin:10px 0;
+}
+
+.counter{
+  text-align:center;
+  font-size:18px;
+  margin-bottom:10px;
+}
+
+input,button{
   width:100%;
   padding:14px;
   font-size:18px;
   border-radius:10px;
   border:2px solid var(--border);
 }
-.result{margin-top:10px;font-size:22px;font-weight:700;text-align:center}
+button{
+  margin-top:8px;
+  background:#111;
+  color:#fff;
+  cursor:pointer;
+}
+
+.result{
+  margin-top:10px;
+  font-size:22px;
+  font-weight:800;
+  text-align:center
+}
 .ok{color:var(--green)}
 .err{color:var(--red)}
-#bigWaybill{
-  font-size:26px;
-  font-weight:800;
-  text-align:center;
-  margin:10px 0;
-}
+.warn{color:var(--yellow)}
+
 .history{
   margin-top:14px;
-  max-height:250px;
+  max-height:260px;
   overflow:auto;
   border-top:1px solid var(--border)
 }
-.row{font-size:14px;padding:6px;border-bottom:1px dashed var(--border)}
+.row{
+  font-size:14px;
+  padding:6px;
+  border-bottom:1px dashed var(--border)
+}
 .row.ok{color:var(--green)}
 .row.err{color:var(--red)}
+.row.warn{color:var(--yellow)}
+
+.camera-wrap{
+  position:relative;
+  margin-top:10px;
+}
+video{
+  width:100%;
+  border-radius:10px;
+  display:none;
+}
+.scan-guide{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:220px;
+  height:140px;
+  transform:translate(-50%,-50%);
+  border:3px solid rgba(0,255,0,.8);
+  border-radius:12px;
+  box-shadow:0 0 0 2000px rgba(0,0,0,.35);
+  pointer-events:none;
+  display:none;
+}
+.scan-line{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:3px;
+  background:#00ff88;
+  animation:scanline 2s linear infinite;
+}
+@keyframes scanline{
+  0%{top:0}
+  50%{top:calc(100% - 3px)}
+  100%{top:0}
+}
 </style>
 </head>
 
@@ -55,11 +126,24 @@ input{
     <h1>📦 J&T Waybill Scanner</h1>
 
     <div id="bigWaybill"></div>
-    <div style="text-align:center;font-size:18px">
+
+    <div class="counter">
       UNIQUE SCANNED: <b id="count">0</b>
     </div>
 
-    <input id="scanInput" autofocus placeholder="Scan waybill">
+    <!-- MANUAL / SCANNER INPUT -->
+    <input id="scanInput" autofocus placeholder="Scan or type J&T waybill">
+
+    <!-- CAMERA BUTTON -->
+    <button onclick="startCamera()">📷 Use Camera</button>
+
+    <!-- CAMERA VIEW -->
+    <div class="camera-wrap">
+      <video id="video"></video>
+      <div class="scan-guide" id="guide">
+        <div class="scan-line"></div>
+      </div>
+    </div>
 
     <div id="result" class="result"></div>
     <div id="history" class="history"></div>
@@ -67,29 +151,39 @@ input{
 </div>
 
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwytBfEg2rO9gI1GvL1QOIR5kal1oWFBob76fcZfc1eEsJzQJ-COA9hQ3xozSoY4nbB/exec";
+/* ================= CONFIG ================= */
+const WEB_APP_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
 const jntPattern = /^JT[0-9]{10,14}$/;
 
+/* ================= ELEMENTS ================= */
 const input = document.getElementById("scanInput");
 const result = document.getElementById("result");
 const historyBox = document.getElementById("history");
 const bigWaybill = document.getElementById("bigWaybill");
 const countEl = document.getElementById("count");
+const video = document.getElementById("video");
+const guide = document.getElementById("guide");
 
+/* ================= STATE ================= */
 const scannedSet = new Set();
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+let detector, stream;
+let lastCamScan = "";
+let lastCamTime = 0;
+const CAM_DELAY = 1500;
 
+/* ================= HELPERS ================= */
 function beep(freq,dur){
-  const o=audioCtx.createOscillator();
-  o.frequency.value=freq;
+  const o = audioCtx.createOscillator();
+  o.frequency.value = freq;
   o.connect(audioCtx.destination);
   o.start();
-  o.stop(audioCtx.currentTime+dur);
+  o.stop(audioCtx.currentTime + dur);
 }
 
 function flash(color){
-  document.body.style.background=color;
-  setTimeout(()=>document.body.style.background="",200);
+  document.body.style.background = color;
+  setTimeout(()=>document.body.style.background="",180);
 }
 
 function now(){
@@ -107,50 +201,107 @@ function upload(code,status){
   }).catch(()=>{});
 }
 
+function addHistory(text,cls){
+  historyBox.innerHTML =
+    `<div class="row ${cls}">${text}</div>` +
+    historyBox.innerHTML;
+  if(historyBox.children.length > 12){
+    historyBox.lastChild.remove();
+  }
+}
+
+/* ================= CORE LOGIC ================= */
 function processScan(val){
   bigWaybill.textContent = val;
 
+  // INVALID
   if(!jntPattern.test(val)){
-    result.textContent="✖ INVALID";
-    result.className="result err";
-    bigWaybill.style.color="var(--red)";
+    result.textContent = "✖ INVALID WAYBILL";
+    result.className = "result err";
+    bigWaybill.style.color = "var(--red)";
     flash("#fee2e2");
     beep(200,0.5);
+    addHistory(`✖ ${val} | ${now()}`,"err");
     upload(val,"INVALID");
     return;
   }
 
+  // DUPLICATE
   if(scannedSet.has(val)){
-    result.textContent="⚠ DUPLICATE";
-    result.className="result err";
-    bigWaybill.style.color="#f59e0b";
-    beep(600,0.1);
-    beep(600,0.1);
+    result.textContent = "⚠ DUPLICATE";
+    result.className = "result warn";
+    bigWaybill.style.color = "var(--yellow)";
+    flash("#fef3c7");
+    beep(600,0.1); beep(600,0.1);
+    addHistory(`⚠ DUPLICATE ${val} | ${now()}`,"warn");
     upload(val,"DUPLICATE");
     return;
   }
 
+  // VALID NEW
   scannedSet.add(val);
   countEl.textContent = scannedSet.size;
 
-  result.textContent="✔ VALID";
-  result.className="result ok";
-  bigWaybill.style.color="var(--green)";
+  result.textContent = "✔ VALID J&T WAYBILL";
+  result.className = "result ok";
+  bigWaybill.style.color = "var(--green)";
   flash("#dcfce7");
   beep(900,0.1);
 
-  historyBox.innerHTML =
-    `<div class="row ok">✔ ${val} | ${now()}</div>` +
-    historyBox.innerHTML;
-
+  addHistory(`✔ ${val} | ${now()}`,"ok");
   upload(val,"VALID");
 }
 
-input.addEventListener("change",()=>{
-  const val = input.value.trim().toUpperCase();
-  if(val) processScan(val);
-  input.value="";
+/* ================= SCANNER / MANUAL INPUT ================= */
+input.addEventListener("keydown",(e)=>{
+  if(e.key === "Enter"){
+    const val = input.value.trim().toUpperCase();
+    if(val) processScan(val);
+    input.value = "";
+  }
 });
+
+// keep focus for scanner gun
+setInterval(()=>input.focus(),500);
+
+/* ================= CAMERA MODE ================= */
+async function startCamera(){
+  if(!("BarcodeDetector" in window)){
+    alert("Camera scanning not supported on this browser.");
+    return;
+  }
+
+  detector = new BarcodeDetector({
+    formats:["code_128","qr_code","ean_13","ean_8","upc_a","upc_e"]
+  });
+
+  stream = await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:"environment"}
+  });
+
+  video.srcObject = stream;
+  video.style.display = "block";
+  guide.style.display = "block";
+  video.play();
+
+  scanLoop();
+}
+
+async function scanLoop(){
+  if(video.readyState === 4){
+    const codes = await detector.detect(video);
+    if(codes.length){
+      const code = codes[0].rawValue.toUpperCase();
+      const t = Date.now();
+      if(code !== lastCamScan || t - lastCamTime > CAM_DELAY){
+        lastCamScan = code;
+        lastCamTime = t;
+        processScan(code);
+      }
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
 </script>
 </body>
 </html>
