@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>📦 J&T Waybill Scanner 1.6</title>
+<title>📦 J&T Waybill Scanner 1.7</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -123,21 +123,17 @@ video{
 <body>
 <div class="container">
   <div class="card">
-    <h1>📦 J&T Waybill Scanner 1.6</h1>
+    <h1>📦 J&T Waybill Scanner 1.7</h1>
 
     <div id="bigWaybill"></div>
 
     <div class="counter">
-      UNIQUE SCANNED: <b id="count">0</b>
+      UNIQUE SCANNED (LIVE): <b id="count">0</b>
     </div>
 
-    <!-- MANUAL / SCANNER INPUT -->
     <input id="scanInput" autofocus placeholder="Scan or type J&T waybill">
-
-    <!-- CAMERA BUTTON -->
     <button onclick="startCamera()">📷 Use Camera</button>
 
-    <!-- CAMERA VIEW -->
     <div class="camera-wrap">
       <video id="video"></video>
       <div class="scan-guide" id="guide">
@@ -151,11 +147,9 @@ video{
 </div>
 
 <script>
-/* ================= CONFIG ================= */
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwytBfEg2rO9gI1GvL1QOIR5kal1oWFBob76fcZfc1eEsJzQJ-COA9hQ3xozSoY4nbB/exec";
 const jntPattern = /^JT[0-9]{10,14}$/;
 
-/* ================= ELEMENTS ================= */
 const input = document.getElementById("scanInput");
 const result = document.getElementById("result");
 const historyBox = document.getElementById("history");
@@ -164,7 +158,6 @@ const countEl = document.getElementById("count");
 const video = document.getElementById("video");
 const guide = document.getElementById("guide");
 
-/* ================= STATE ================= */
 const scannedSet = new Set();
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 let detector, stream;
@@ -172,11 +165,11 @@ let lastCamScan = "";
 let lastCamTime = 0;
 const CAM_DELAY = 1500;
 
-/* ================= HELPERS ================= */
+/* ===== HELPERS ===== */
 function beep(freq,dur){
   const o = audioCtx.createOscillator();
   const g = audioCtx.createGain();
-  g.gain.value = 1.2; // louder
+  g.gain.value = 1.2;
   o.frequency.value = freq;
   o.connect(g);
   g.connect(audioCtx.destination);
@@ -198,28 +191,19 @@ function now(){ return new Date().toLocaleString(); }
 function upload(code,status){
   fetch(WEB_APP_URL,{
     method:"POST",
-    body:JSON.stringify({
-      timestamp:now(),
-      waybill:code,
-      status
-    })
+    body:JSON.stringify({timestamp:now(), waybill:code, status})
   }).catch(()=>{});
 }
 
 function addHistory(text,cls){
-  historyBox.innerHTML =
-    `<div class="row ${cls}">${text}</div>` +
-    historyBox.innerHTML;
-  if(historyBox.children.length > 12){
-    historyBox.lastChild.remove();
-  }
+  historyBox.innerHTML = `<div class="row ${cls}">${text}</div>` + historyBox.innerHTML;
+  if(historyBox.children.length > 12) historyBox.lastChild.remove();
 }
 
-/* ================= CORE LOGIC ================= */
-function processScan(val){
+/* ===== CORE LOGIC ===== */
+async function processScan(val){
   bigWaybill.textContent = val;
 
-  // INVALID
   if(!jntPattern.test(val)){
     result.textContent = "✖ INVALID WAYBILL";
     result.className = "result err";
@@ -230,7 +214,6 @@ function processScan(val){
     return;
   }
 
-  // DUPLICATE
   if(scannedSet.has(val)){
     result.textContent = "⚠ DUPLICATE";
     result.className = "result warn";
@@ -241,10 +224,7 @@ function processScan(val){
     return;
   }
 
-  // VALID NEW
   scannedSet.add(val);
-  countEl.textContent = scannedSet.size;
-
   result.textContent = "✔ VALID J&T WAYBILL";
   result.className = "result ok";
   flash("#16a34a","#fff");
@@ -253,48 +233,40 @@ function processScan(val){
   upload(val,"VALID");
 }
 
-/* ================= SCANNER / MANUAL INPUT ================= */
+/* ===== SCANNER / MANUAL INPUT ===== */
 input.addEventListener("keydown",(e)=>{
-  if(e.key === "Enter"){
-    const val = input.value.trim().toUpperCase();
+  if(e.key==="Enter"){
+    const val=input.value.trim().toUpperCase();
     if(val) processScan(val);
-    input.value = "";
+    input.value="";
   }
 });
 
-// keep focus for scanner gun
 setInterval(()=>input.focus(),500);
 
-/* ================= CAMERA MODE ================= */
+/* ===== CAMERA MODE ===== */
 async function startCamera(){
   if(!("BarcodeDetector" in window)){
-    alert("Camera scanning not supported on this browser.");
+    alert("Camera scanning not supported.");
     return;
   }
 
-  detector = new BarcodeDetector({
-    formats:["code_128","qr_code","ean_13","ean_8","upc_a","upc_e"]
-  });
-
-  stream = await navigator.mediaDevices.getUserMedia({
-    video:{facingMode:"environment"}
-  });
-
+  detector = new BarcodeDetector({formats:["code_128","qr_code","ean_13","ean_8","upc_a","upc_e"]});
+  stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
   video.srcObject = stream;
   video.style.display = "block";
   guide.style.display = "block";
   video.play();
-
   scanLoop();
 }
 
 async function scanLoop(){
-  if(video.readyState === 4 && detector){
+  if(video.readyState===4 && detector){
     const codes = await detector.detect(video);
     if(codes.length){
       const code = codes[0].rawValue.toUpperCase();
       const t = Date.now();
-      if(code !== lastCamScan || t - lastCamTime > CAM_DELAY){
+      if(code!==lastCamScan || t-lastCamTime>CAM_DELAY){
         lastCamScan = code;
         lastCamTime = t;
         processScan(code);
@@ -303,6 +275,18 @@ async function scanLoop(){
   }
   requestAnimationFrame(scanLoop);
 }
+
+/* ===== LIVE UNIQUE COUNT FROM SHEET ===== */
+async function updateUniqueCount(){
+  try{
+    const res = await fetch(WEB_APP_URL);
+    const data = await res.json();
+    countEl.textContent = data.count;
+  }catch(e){
+    console.error("Failed to fetch unique count",e);
+  }
+}
+setInterval(updateUniqueCount,2000); // refresh every 2s
 </script>
 </body>
 </html>
