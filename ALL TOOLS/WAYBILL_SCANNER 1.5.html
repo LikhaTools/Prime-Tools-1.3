@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>📦 J&T Waybill Scanner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg:#f4f6f8;
+  --green:#16a34a;
+  --red:#dc2626;
+  --border:#e5e7eb;
+}
+body{margin:0;background:var(--bg);font-family:system-ui}
+.container{max-width:520px;margin:auto;padding:16px}
+.card{
+  background:#fff;
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 10px 25px rgba(0,0,0,.08)
+}
+h1{text-align:center}
+input{
+  width:100%;
+  padding:14px;
+  font-size:18px;
+  border-radius:10px;
+  border:2px solid var(--border);
+}
+.result{margin-top:10px;font-size:22px;font-weight:700;text-align:center}
+.ok{color:var(--green)}
+.err{color:var(--red)}
+#bigWaybill{
+  font-size:26px;
+  font-weight:800;
+  text-align:center;
+  margin:10px 0;
+}
+.history{
+  margin-top:14px;
+  max-height:250px;
+  overflow:auto;
+  border-top:1px solid var(--border)
+}
+.row{font-size:14px;padding:6px;border-bottom:1px dashed var(--border)}
+.row.ok{color:var(--green)}
+.row.err{color:var(--red)}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <div class="card">
+    <h1>📦 J&T Waybill Scanner</h1>
+
+    <div id="bigWaybill"></div>
+    <div style="text-align:center;font-size:18px">
+      UNIQUE SCANNED: <b id="count">0</b>
+    </div>
+
+    <input id="scanInput" autofocus placeholder="Scan waybill">
+
+    <div id="result" class="result"></div>
+    <div id="history" class="history"></div>
+  </div>
+</div>
+
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwytBfEg2rO9gI1GvL1QOIR5kal1oWFBob76fcZfc1eEsJzQJ-COA9hQ3xozSoY4nbB/exec";
+const jntPattern = /^JT[0-9]{10,14}$/;
+
+const input = document.getElementById("scanInput");
+const result = document.getElementById("result");
+const historyBox = document.getElementById("history");
+const bigWaybill = document.getElementById("bigWaybill");
+const countEl = document.getElementById("count");
+
+const scannedSet = new Set();
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+
+function beep(freq,dur){
+  const o=audioCtx.createOscillator();
+  o.frequency.value=freq;
+  o.connect(audioCtx.destination);
+  o.start();
+  o.stop(audioCtx.currentTime+dur);
+}
+
+function flash(color){
+  document.body.style.background=color;
+  setTimeout(()=>document.body.style.background="",200);
+}
+
+function now(){
+  return new Date().toLocaleString();
+}
+
+function upload(code,status){
+  fetch(WEB_APP_URL,{
+    method:"POST",
+    body:JSON.stringify({
+      timestamp:now(),
+      waybill:code,
+      status
+    })
+  }).catch(()=>{});
+}
+
+function processScan(val){
+  bigWaybill.textContent = val;
+
+  if(!jntPattern.test(val)){
+    result.textContent="✖ INVALID";
+    result.className="result err";
+    bigWaybill.style.color="var(--red)";
+    flash("#fee2e2");
+    beep(200,0.5);
+    upload(val,"INVALID");
+    return;
+  }
+
+  if(scannedSet.has(val)){
+    result.textContent="⚠ DUPLICATE";
+    result.className="result err";
+    bigWaybill.style.color="#f59e0b";
+    beep(600,0.1);
+    beep(600,0.1);
+    upload(val,"DUPLICATE");
+    return;
+  }
+
+  scannedSet.add(val);
+  countEl.textContent = scannedSet.size;
+
+  result.textContent="✔ VALID";
+  result.className="result ok";
+  bigWaybill.style.color="var(--green)";
+  flash("#dcfce7");
+  beep(900,0.1);
+
+  historyBox.innerHTML =
+    `<div class="row ok">✔ ${val} | ${now()}</div>` +
+    historyBox.innerHTML;
+
+  upload(val,"VALID");
+}
+
+input.addEventListener("change",()=>{
+  const val = input.value.trim().toUpperCase();
+  if(val) processScan(val);
+  input.value="";
+});
+</script>
+</body>
+</html>
