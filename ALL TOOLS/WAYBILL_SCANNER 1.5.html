@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>📦 J&T Waybill Scanner 1.7</title>
+<title>📦 J&T Waybill Scanner</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -14,280 +14,161 @@
   --border:#e5e7eb;
 }
 *{box-sizing:border-box}
-body{
-  margin:0;
-  background:var(--bg);
-  font-family:system-ui;
-  transition:background .15s;
-}
+body{margin:0;background:var(--bg);font-family:system-ui;transition:background .15s;}
 .container{max-width:520px;margin:auto;padding:16px}
-.card{
-  background:#fff;
-  border-radius:16px;
-  padding:20px;
-  box-shadow:0 10px 25px rgba(0,0,0,.08)
-}
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
 h1{text-align:center;margin:0 0 10px}
-
-#bigWaybill{
-  font-size:28px;
-  font-weight:900;
-  text-align:center;
-  margin:10px 0;
-}
-
-.counter{
-  text-align:center;
-  font-size:18px;
-  margin-bottom:10px;
-}
-
-input,button{
-  width:100%;
-  padding:14px;
-  font-size:18px;
-  border-radius:10px;
-  border:2px solid var(--border);
-}
-button{
-  margin-top:8px;
-  background:#111;
-  color:#fff;
-  cursor:pointer;
-}
-
-.result{
-  margin-top:10px;
-  font-size:22px;
-  font-weight:800;
-  text-align:center
-}
+#bigWaybill{font-size:28px;font-weight:900;text-align:center;margin:10px 0}
+.counter{text-align:center;font-size:18px;margin-bottom:10px}
+input,button{width:100%;padding:14px;font-size:18px;border-radius:10px;border:2px solid var(--border)}
+button{margin-top:8px;background:#111;color:#fff;cursor:pointer}
+.result{margin-top:10px;font-size:22px;font-weight:800;text-align:center}
 .ok{color:var(--green)}
 .err{color:var(--red)}
 .warn{color:var(--yellow)}
-
-.history{
-  margin-top:14px;
-  max-height:260px;
-  overflow:auto;
-  border-top:1px solid var(--border)
-}
-.row{
-  font-size:14px;
-  padding:6px;
-  border-bottom:1px dashed var(--border)
-}
+.history{margin-top:14px;max-height:260px;overflow:auto;border-top:1px solid var(--border)}
+.row{font-size:14px;padding:6px;border-bottom:1px dashed var(--border)}
 .row.ok{color:var(--green)}
 .row.err{color:var(--red)}
 .row.warn{color:var(--yellow)}
-
-.camera-wrap{
-  position:relative;
-  margin-top:10px;
-}
-video{
-  width:100%;
-  border-radius:10px;
-  display:none;
-}
-.scan-guide{
-  position:absolute;
-  top:50%;
-  left:50%;
-  width:220px;
-  height:140px;
-  transform:translate(-50%,-50%);
-  border:3px solid rgba(0,255,0,.8);
-  border-radius:12px;
-  pointer-events:none;
-  display:none;
-  box-shadow:none;
-}
-.scan-line{
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:3px;
-  background:#00ff88;
-  animation:scanline 2s linear infinite;
-}
-@keyframes scanline{
-  0%{top:0}
-  50%{top:calc(100% - 3px)}
-  100%{top:0}
-}
+.camera-wrap{position:relative;margin-top:10px}
+video{width:100%;border-radius:10px;display:none}
+.scan-guide{position:absolute;top:50%;left:50%;width:220px;height:140px;transform:translate(-50%,-50%);border:3px solid rgba(0,255,0,.8);border-radius:12px;pointer-events:none;display:none;box-shadow:none;}
+.scan-line{position:absolute;top:0;left:0;width:100%;height:3px;background:#00ff88;animation:scanline 2s linear infinite;}
+@keyframes scanline{0%{top:0}50%{top:calc(100% - 3px)}100%{top:0}}
 </style>
 </head>
-
 <body>
 <div class="container">
   <div class="card">
-    <h1>📦 J&T Waybill Scanner 1.7</h1>
+    <h1>📦 J&T Waybill Scanner 2.0</h1>
 
-    <div id="bigWaybill"></div>
-
-    <div class="counter">
-      UNIQUE SCANNED (LIVE): <b id="count">0</b>
+    <!-- DEVICE NAME INPUT -->
+    <div id="nameSection">
+      <input id="deviceName" placeholder="Enter Your Name / Device Name" autofocus>
+      <button id="startBtn">Start Scanning</button>
     </div>
 
-    <input id="scanInput" autofocus placeholder="Scan or type J&T waybill">
-    <button onclick="startCamera()">📷 Use Camera</button>
-
-    <div class="camera-wrap">
-      <video id="video"></video>
-      <div class="scan-guide" id="guide">
-        <div class="scan-line"></div>
+    <!-- Big Display & Counters -->
+    <div id="scanSection" style="display:none">
+      <div id="bigWaybill"></div>
+      <div class="counter">
+        UNIQUE SCANNED (This Device): <b id="deviceCount">0</b><br>
+        OVERALL SCAN: <b id="overallCount">0</b>
       </div>
+      <input id="scanInput" placeholder="Scan or type J&T waybill">
+      <button id="cameraBtn" onclick="startCamera()">📷 Use Camera</button>
+      <div class="camera-wrap">
+        <video id="video"></video>
+        <div class="scan-guide" id="guide">
+          <div class="scan-line"></div>
+        </div>
+      </div>
+      <div id="result" class="result"></div>
+      <div id="history" class="history"></div>
     </div>
-
-    <div id="result" class="result"></div>
-    <div id="history" class="history"></div>
   </div>
 </div>
 
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz7HX4RJP21uodSNKZrutzMDfzWCgLqTDJooQt3f9X67Px3Tx1-m7lBoF2_6O4j7WEp/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwRycjecmqUfyBrO5ul5bhwmRVOfaYpaRkDe8MfFxSOtmfns69v4AurjmhXfp_9NN-x/exec";
 const jntPattern = /^JT[0-9]{10,14}$/;
 
-const input = document.getElementById("scanInput");
+const deviceNameInput = document.getElementById("deviceName");
+const startBtn = document.getElementById("startBtn");
+const nameSection = document.getElementById("nameSection");
+const scanSection = document.getElementById("scanSection");
+const scanInput = document.getElementById("scanInput");
+const cameraBtn = document.getElementById("cameraBtn");
+const bigWaybill = document.getElementById("bigWaybill");
 const result = document.getElementById("result");
 const historyBox = document.getElementById("history");
-const bigWaybill = document.getElementById("bigWaybill");
-const countEl = document.getElementById("count");
+const deviceCountEl = document.getElementById("deviceCount");
+const overallCountEl = document.getElementById("overallCount");
 const video = document.getElementById("video");
 const guide = document.getElementById("guide");
 
-const scannedSet = new Set();
+let deviceName = "";
+const deviceSet = new Set();
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-let detector, stream;
-let lastCamScan = "";
-let lastCamTime = 0;
-const CAM_DELAY = 1500;
+let detector, stream, lastCamScan="", lastCamTime=0;
+const CAM_DELAY=1500;
 
-/* ===== HELPERS ===== */
-function beep(freq,dur){
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  g.gain.value = 1.2;
-  o.frequency.value = freq;
-  o.connect(g);
-  g.connect(audioCtx.destination);
-  o.start();
-  o.stop(audioCtx.currentTime + dur);
-}
-
-function flash(bgColor, textColor="#fff"){
-  document.body.style.background = bgColor;
-  bigWaybill.style.color = textColor;
-  setTimeout(()=>{
-    document.body.style.background = "#f4f6f8";
-    bigWaybill.style.color = "#000";
-  },250);
-}
-
-function now(){ return new Date().toLocaleString(); }
-
-function upload(code,status){
-  fetch(WEB_APP_URL,{
-    method:"POST",
-    body:JSON.stringify({timestamp:now(), waybill:code, status})
-  }).catch(()=>{});
-}
-
-function addHistory(text,cls){
-  historyBox.innerHTML = `<div class="row ${cls}">${text}</div>` + historyBox.innerHTML;
-  if(historyBox.children.length > 12) historyBox.lastChild.remove();
-}
-
-/* ===== CORE LOGIC ===== */
-async function processScan(val){
-  bigWaybill.textContent = val;
-
-  if(!jntPattern.test(val)){
-    result.textContent = "✖ INVALID WAYBILL";
-    result.className = "result err";
-    flash("#dc2626","#fff");
-    beep(300,0.35);
-    addHistory(`✖ ${val} | ${now()}`,"err");
-    upload(val,"INVALID");
-    return;
-  }
-
-  if(scannedSet.has(val)){
-    result.textContent = "⚠ DUPLICATE";
-    result.className = "result warn";
-    flash("#f59e0b","#000");
-    beep(600,0.15); beep(600,0.15);
-    addHistory(`⚠ DUPLICATE ${val} | ${now()}`,"warn");
-    upload(val,"DUPLICATE");
-    return;
-  }
-
-  scannedSet.add(val);
-  result.textContent = "✔ VALID J&T WAYBILL";
-  result.className = "result ok";
-  flash("#16a34a","#fff");
-  beep(900,0.15);
-  addHistory(`✔ ${val} | ${now()}`,"ok");
-  upload(val,"VALID");
-}
-
-/* ===== SCANNER / MANUAL INPUT ===== */
-input.addEventListener("keydown",(e)=>{
-  if(e.key==="Enter"){
-    const val=input.value.trim().toUpperCase();
-    if(val) processScan(val);
-    input.value="";
-  }
+// Start scanning after entering name
+startBtn.addEventListener("click", ()=>{
+  const name = deviceNameInput.value.trim();
+  if(!name){ alert("Please enter your name to start scanning!"); return; }
+  deviceName = name;
+  nameSection.style.display="none";
+  scanSection.style.display="block";
+  scanInput.focus();
 });
 
-setInterval(()=>input.focus(),500);
+// Beep + flash
+function beep(freq,dur){const o=audioCtx.createOscillator(); o.frequency.value=freq; o.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur);}
+function flash(color){document.body.style.background=color; setTimeout(()=>{document.body.style.background="#f4f6f8"},250);}
 
-/* ===== CAMERA MODE ===== */
-async function startCamera(){
-  if(!("BarcodeDetector" in window)){
-    alert("Camera scanning not supported.");
-    return;
+// Helpers
+function now(){return new Date().toLocaleString();}
+function addHistory(text,cls){historyBox.innerHTML=`<div class="row ${cls}">${text}</div>`+historyBox.innerHTML; if(historyBox.children.length>12) historyBox.lastChild.remove();}
+async function upload(val,status){fetch(WEB_APP_URL,{method:"POST",body:JSON.stringify({timestamp:now(),waybill:val,status,device:deviceName})}).catch(()=>{});}
+
+// Fetch Overall count (I2) every 2s
+async function updateOverallCount(){
+  try{
+    const res = await fetch(WEB_APP_URL);
+    const data = await res.json();
+    overallCountEl.textContent = data.I2 || 0;
+  }catch(e){}
+}
+setInterval(updateOverallCount,2000);
+
+// Core scan logic
+async function processScan(val){
+  val = val.trim().toUpperCase();
+  bigWaybill.textContent = val;
+
+  // Invalid
+  if(!jntPattern.test(val)){
+    result.textContent="✖ INVALID WAYBILL"; result.className="result err"; flash("#dc2626"); beep(300,0.3);
+    addHistory(`✖ ${val} | ${now()}`,"err"); upload(val,"INVALID"); return;
   }
 
-  detector = new BarcodeDetector({formats:["code_128","qr_code","ean_13","ean_8","upc_a","upc_e"]});
-  stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-  video.srcObject = stream;
-  video.style.display = "block";
-  guide.style.display = "block";
-  video.play();
-  scanLoop();
+  // Duplicate local
+  if(deviceSet.has(val)){
+    result.textContent="⚠ DUPLICATE (This Device)"; result.className="result warn"; flash("#f59e0b"); beep(600,0.15); beep(600,0.15);
+    addHistory(`⚠ DUPLICATE ${val} | ${now()}`,"warn"); upload(val,"DUPLICATE"); return;
+  }
+
+  // Valid new
+  deviceSet.add(val); deviceCountEl.textContent=deviceSet.size;
+  result.textContent="✔ VALID J&T WAYBILL"; result.className="result ok"; flash("#16a34a"); beep(900,0.15);
+  addHistory(`✔ ${val} | ${deviceName} | ${now()}`,"ok"); upload(val,"VALID");
 }
 
+// Scanner gun / manual input
+scanInput.addEventListener("keydown",(e)=>{if(e.key==="Enter"){const val=scanInput.value.trim(); if(val) processScan(val); scanInput.value="";}});
+setInterval(()=>scanInput.focus(),500);
+
+// Camera scan
+async function startCamera(){
+  if(!("BarcodeDetector" in window)){alert("Camera scan not supported"); return;}
+  detector=new BarcodeDetector({formats:["code_128","qr_code","ean_13","ean_8","upc_a","upc_e"]});
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+  video.srcObject=stream; video.style.display="block"; guide.style.display="block"; video.play();
+  scanLoop();
+}
 async function scanLoop(){
-  if(video.readyState===4 && detector){
-    const codes = await detector.detect(video);
+  if(video.readyState===4){
+    const codes=await detector.detect(video);
     if(codes.length){
-      const code = codes[0].rawValue.toUpperCase();
-      const t = Date.now();
-      if(code!==lastCamScan || t-lastCamTime>CAM_DELAY){
-        lastCamScan = code;
-        lastCamTime = t;
-        processScan(code);
-      }
+      const code=codes[0].rawValue.toUpperCase();
+      const t=Date.now();
+      if(code!==lastCamScan || t-lastCamTime>CAM_DELAY){lastCamScan=code; lastCamTime=t; processScan(code);}
     }
   }
   requestAnimationFrame(scanLoop);
 }
-
-/* ===== LIVE UNIQUE COUNT FROM SHEET ===== */
-async function updateUniqueCount(){
-  try{
-    const res = await fetch(WEB_APP_URL);
-    const data = await res.json();
-    countEl.textContent = data.count;
-  }catch(e){
-    console.error("Failed to fetch unique count",e);
-  }
-}
-setInterval(updateUniqueCount,2000); // refresh every 2s
 </script>
 </body>
 </html>
-
