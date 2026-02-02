@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Inventory Engine Fixed</title>
+<style>
+body{font-family:Arial;background:#f4f6f8;margin:0}
+.container{display:flex;height:100vh}
+.left{width:32%;background:#fff;padding:20px;overflow:auto;border-right:1px solid #e5e7eb}
+.right{flex:1;padding:20px;overflow:auto}
+textarea{width:100%;height:90px;margin-bottom:10px;font-family:monospace;font-size:13px;padding:6px}
+button{padding:6px 10px;border:none;border-radius:6px;cursor:pointer;font-size:12px}
+.primary{background:#2563eb;color:#fff;margin-bottom:6px}
+.copy{background:#10b981;color:#fff;margin-bottom:6px}
+.flex{display:flex;gap:10px}
+.box{flex:1}
+table{width:100%;border-collapse:collapse;margin-top:15px;font-size:12px}
+th,td{border:1px solid #e5e7eb;padding:5px;text-align:center}
+th{background:#f3f4f6}
+.red{background:#fee2e2}
+.yellow{background:#fef9c3}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="left">
+    <h3>📥 INPUT</h3>
+    <b>STOCK</b>
+    <textarea id="stock"></textarea>
+
+    <b>HOLD</b>
+    <textarea id="hold"></textarea>
+
+    <b>SHIPPED</b>
+    <textarea id="shipped"></textarea>
+
+    <b>RTS</b>
+    <textarea id="rts"></textarea>
+
+    <b>SUPPLIER</b>
+    <textarea id="supplier"></textarea>
+
+    <button class="primary" onclick="compute()">COMPUTE</button>
+    <button id="uploadBtn" class="primary" onclick="uploadAll()">Upload All (Gsheet)</button>
+  </div>
+
+  <div class="right">
+    <h3>📊 RESULT</h3>
+    <div class="flex">
+      <div class="box">
+        <b>AUTO STOCK</b>
+        <button class="copy" onclick="copyText('autoStock')">COPY</button>
+        <textarea id="autoStock" readonly></textarea>
+      </div>
+      <div class="box">
+        <b>AUTO RESTOCK</b>
+        <button class="copy" onclick="copyText('autoRestock')">COPY</button>
+        <textarea id="autoRestock" readonly></textarea>
+      </div>
+    </div>
+
+    <h3>DEBUG TABLE</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>ITEM</th>
+          <th>STOCK</th>
+          <th>SUPPLIER</th>
+          <th>RTS</th>
+          <th>SHIPPED</th>
+          <th>DEMAND</th>
+          <th>FINAL STOCK</th>
+          <th>RESTOCK</th>
+        </tr>
+      </thead>
+      <tbody id="debugBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const WEB_APP_URL="https://script.google.com/macros/s/AKfycbxG9OtX6IyyhMAF1nfP9sAaReqDFaMOtJhW_dkWQqLGjBhGh8f-E-1FX8RnYo0p32N22A/exec";
+
+// ==== HELPERS ====
+function copyText(id){ navigator.clipboard.writeText(document.getElementById(id).value); }
+function pcs(name){ const m=name.match(/^(\d+)\s*x/i); return m?Number(m[1]):1; }
+function clean(name){ return name.replace(/^\d+\s*x\s*/i,'').trim().toUpperCase(); }
+function num(v){ return Number(String(v||0).replace(/,/g,'')); }
+function round100(n){ return n<=0?0:Math.ceil(n/100)*100; }
+function skipHeader(text){ return text.split('\n').slice(1).join('\n'); }
+
+// ==== PARSERS ====
+// Dash-safe parser for STOCK / SUPPLIER
+function parseDash(text){
+  const map={};
+  text.split('\n').forEach(line=>{
+    if(!line.trim()) return;
+    const dashMatch = line.match(/^(.*?)-\s*(\d+)$/); // everything up to last dash is item
+    if(!dashMatch) return;
+    const item = clean(dashMatch[1]);
+    const qty = num(dashMatch[2]);
+    map[item] = (map[item]||0) + qty;
+  });
+  return map;
+}
+
+// Generic table parser for HOLD / ORDER / SHIPPED / RTS
+function parseTable(text,col,skipFirstRow=true){
+  const map={};
+  const lines=skipFirstRow ? text.split('\n').slice(1) : text.split('\n');
+  lines.forEach(l=>{
+    if(!l.trim()) return;
+    const c=l.split(/\t+/);
+    if(!c[col]) return;
+    const item=clean(c[0]);
+    map[item]=(map[item]||0)+(num(c[col])*pcs(c[0]));
+  });
+  return map;
+}
+
+// ==== COMPUTE ====
+// ==== COMPUTE ====
+function compute(){
+  const today=new Date().toLocaleDateString('en-CA');
+
+  const stockMap=parseDash(skipHeader(stock.value));
+  const supplierMap=parseDash(supplier.value); 
+  const holdMap=parseTable(hold.value,1);
+  const orderMap=parseTable(hold.value,2);
+  const shippedMap=parseTable(shipped.value,1);
+  const rtsMap=parseTable(rts.value,2);
+
+  const items=new Set([
+    ...Object.keys(stockMap),
+    ...Object.keys(supplierMap),
+    ...Object.keys(holdMap),
+    ...Object.keys(orderMap),
+    ...Object.keys(shippedMap),
+    ...Object.keys(rtsMap)
+  ]);
+
+  let sTxt=`AUTO STOCK (${today})\n\n`;
+  let rTxt=`AUTO RESTOCK (${today})\n\n`;
+  const debugBody=document.getElementById('debugBody');
+  debugBody.innerHTML='';
+
+  const restockMap={}; // for combining normalized items in restock
+
+  items.forEach(i=>{
+    const demand=(holdMap[i]||0)+(orderMap[i]||0);
+    const cur=(stockMap[i]||0)+(supplierMap[i]||0)+(rtsMap[i]||0)-(shippedMap[i]||0);
+    const safe=Math.max(cur,0);
+    let restock=round100(Math.max(demand-safe,0));
+
+    // === RESTOCK NORMALIZATION ===
+    let restockKey=i;
+    if(i.toUpperCase()==='FLASHLIGHT') restockKey='MINI FLASHLIGHT';
+    restockMap[restockKey] = (restockMap[restockKey]||0)+restock;
+
+    if(safe>0) sTxt+=`${i} - ${safe}\n`;
+
+    let cls='';
+    if(cur<0) cls='red';
+    else if(demand>0 && safe===0) cls='yellow';
+
+    debugBody.innerHTML+=`
+      <tr class="${cls}">
+        <td>${i}</td>
+        <td>${stockMap[i]||0}</td>
+        <td>${supplierMap[i]||0}</td>
+        <td>${rtsMap[i]||0}</td>
+        <td>- ${shippedMap[i]||0}</td>
+        <td>${demand}</td>
+        <td>${safe}</td>
+        <td>${restock}</td>
+      </tr>`;
+  });
+
+  // write AUTO RESTOCK, combining FLASHLIGHT → MINI FLASHLIGHT
+  Object.entries(restockMap).forEach(([item,qty])=>{
+    if(qty>0) rTxt+=`${item} - ${qty}\n`;
+  });
+
+  autoStock.value=sTxt;
+  autoRestock.value=rTxt;
+}
+
+// ==== NORMALIZATION MAP ====
+const ITEM_NORMALIZE = {
+  "FLASHLIGHT": "MINI FLASHLIGHT",
+  // add more mappings here
+};
+
+// ==== UPLOAD FUNCTION ====
+function uploadAll(){
+  const today=new Date().toLocaleDateString('en-CA');
+
+  // STOCK_UPLOAD
+  const stockRows=[];
+  autoStock.value.split('\n').forEach(l=>{
+    if(!l.includes('-')) return;
+    const parts=l.split('-');
+    let item=parts.slice(0,-1).join('-').trim();
+    let qty=num(parts[parts.length-1]);
+    if(ITEM_NORMALIZE[item]) item = ITEM_NORMALIZE[item];
+    stockRows.push({ date: today, item, qty });
+  });
+
+  // HOLD_UPLOAD (keep multiplier in name, no multiply for qty)
+  const holdRowsMap={};
+  skipHeader(hold.value).split('\n').forEach(l=>{
+    if(!l.trim()) return;
+    const c=l.split(/\t+/);
+    if(!c[0] || !c[1]) return;
+    let multiplier=c[0].match(/^(\d+\s*x)/i)?.[0]||'1 x';
+    let itemName=clean(c[0]);
+    if(ITEM_NORMALIZE[itemName]) itemName = ITEM_NORMALIZE[itemName];
+    const fullName = multiplier + ' ' + itemName;
+    const qty = num(c[1]); // keep as-is
+    holdRowsMap[fullName] = (holdRowsMap[fullName]||0) + qty;
+  });
+  const holdRows = Object.entries(holdRowsMap).map(([item,qty])=>({item, qty}));
+
+  // SHIPPED_UPLOAD (keep multiplier in name, use pasted qty)
+  const shippedRowsMap={};
+  skipHeader(shipped.value).split('\n').forEach(l=>{
+    if(!l.trim() || l.toLowerCase().includes('grand total')) return;
+    const c=l.split(/\t+/);
+    if(!c[0] || !c[1]) return;
+    let multiplier=c[0].match(/^(\d+\s*x)/i)?.[0]||'1 x';
+    let itemName=clean(c[0]);
+    if(ITEM_NORMALIZE[itemName]) itemName = ITEM_NORMALIZE[itemName];
+    const fullName = multiplier + ' ' + itemName;
+    const qty = num(c[1]); // keep as-is
+    shippedRowsMap[fullName] = (shippedRowsMap[fullName]||0) + qty;
+  });
+  const shippedRows = Object.entries(shippedRowsMap).map(([item,qty])=>({item, qty}));
+
+  // POST TO GSheet
+  fetch(WEB_APP_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      STOCK_UPLOAD: stockRows,
+      HOLD_UPLOAD: holdRows,
+      SHIPPED_UPLOAD: shippedRows
+    })
+  });
+
+  alert('Upload initiated!');
+}
+
+// ==== COPY ====
+function copyText(id){ document.getElementById(id).select(); document.execCommand('copy'); }
+</script>
+</body>
+</html>
