@@ -362,8 +362,13 @@ startCamBtn.addEventListener("click", () => {
     if (devices && devices.length) {
       const cameraId = devices[0].id; // default camera
 
+      Html5Qrcode.getCameras().then(devices => {
+    if (devices && devices.length) {
+      // Hanapin yung rear/back camera
+      let backCamera = devices.find(cam => /back|environment/gi.test(cam.label)) || devices[0];
+      
       html5QrCode.start(
-        cameraId,
+        backCamera.id,
         {
           fps: 10,
           qrbox: { width: 250, height: 100 }
@@ -377,9 +382,8 @@ startCamBtn.addEventListener("click", () => {
         }
       );
     }
-  }).catch(err => {
+}).catch(err => {
     alert("Camera not found or permission denied.");
-  });
 });
 
 stopCamBtn.addEventListener("click", () => {
@@ -396,3 +400,4 @@ window.onload=loadState;
 
 </body>
 </html>
+
