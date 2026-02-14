@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>📦 J&T Waybill Scanner 2.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg:#f4f6f8;
+  --green:#16a34a;
+  --red:#dc2626;
+  --yellow:#f59e0b;
+  --blue:#2563eb;
+  --border:#e5e7eb;
+}
+body{margin:0;background:var(--bg);font-family:system-ui}
+.container{max-width:520px;margin:auto;padding:16px}
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,.08);transition:background .3s}
+h1{text-align:center;margin-bottom:10px}
+.counter{text-align:center;font-size:18px;margin-bottom:15px}
+input,button{width:100%;padding:12px;font-size:16px;border-radius:10px;border:2px solid var(--border);margin-top:6px}
+button{cursor:pointer;border:none}
+.btn-green{background:var(--green);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-dark{background:#111;color:#fff}
+.row-flex{display:flex;gap:8px}
+.result{margin-top:10px;font-size:20px;font-weight:800;text-align:center}
+.ok{color:var(--green)}
+.err{color:var(--red)}
+.warn{color:var(--yellow)}
+.history{margin-top:10px;max-height:220px;overflow:auto;border-top:1px solid var(--border)}
+.history div{font-size:13px;padding:4px;border-bottom:1px dashed var(--border)}
+/* TABLE IMPROVED */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  overflow:hidden;
+  border-radius:12px;
+  background:#fff;
+}
+th{
+  background:#111;
+  color:#fff;
+  padding:8px;
+  font-size:13px;
+}
+td{
+  padding:8px;
+  font-size:13px;
+  border-bottom:1px solid #eee;
+}
+tr:last-child td{
+  border-bottom:none;
+}
+tr:hover{
+  background:#f3f4f6;
+}
+/* STATUS FLASH */
+.flash-valid{
+  background:#dcfce7 !important;
+  transition:.3s;
+}
+.flash-dup{
+  background:#fef9c3 !important;
+  transition:.3s;
+}
+.flash-error{
+  background:#fee2e2 !important;
+  transition:.3s;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+<div class="card">
+
+<!-- NAME SCREEN -->
+<div id="nameSection">
+<h1>📦 J&T Waybill Scanner 2.0</h1>
+<input id="deviceNameInput" placeholder="Enter Your First Name">
+<button id="startBtn" class="btn-dark">Start Scanning</button>
+</div>
+
+<!-- MAIN SCREEN -->
+<div id="scanSection" style="display:none">
+
+<h1>📦 J&T Waybill Scanner 2.0</h1>
+
+<div class="counter">
+UNIQUE SCANNED (This Device): <b id="deviceCount">0</b><br>
+OVERALL SCAN: <b id="overallCount">0</b><br>
+SCANNED (<span id="currentSackLabel">Sack #</span>): <b id="thisSackScanned">0</b><br>
+MANUAL INPUT: <b id="thisSackManual">0</b>
+</div>
+
+<div class="row-flex">
+<input id="rtsDate" type="date" style="flex:1">
+<input id="sackInput" placeholder="Sack #" style="flex:1">
+</div>
+
+<input id="manualCount" placeholder="Manual Count">
+
+<div class="row-flex">
+<button id="sackUploadBtn" class="btn-green">Upload Sack</button>
+<button id="resetSackBtn" class="btn-red">Reset Sack</button>
+</div>
+
+<input id="scanInput" placeholder="Scan or type J&T waybill">
+
+<div id="result" class="result"></div>
+
+<div class="history" id="history"></div>
+
+<h3>📊 Per-Sack Summary</h3>
+<div id="summaryTable"></div>
+
+<button id="fullResetBtn" class="btn-dark">Full Reset (New Date)</button>
+
+</div>
+</div>
+</div>
+
+<script>
+const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzhj0DH_7K4edSxZZCCWVXS7Uis_LSvZpNFORE88ww9WmpesSlrAc-E0H6CTzbDngwPPA/exec";
+const jntPattern=/^JT[0-9]{10,14}$/;
+
+const nameSection=document.getElementById("nameSection");
+const scanSection=document.getElementById("scanSection");
+const deviceNameInput=document.getElementById("deviceNameInput");
+const startBtn=document.getElementById("startBtn");
+
+const rtsDate=document.getElementById("rtsDate");
+const sackInput=document.getElementById("sackInput");
+const manualCount=document.getElementById("manualCount");
+const sackUploadBtn=document.getElementById("sackUploadBtn");
+const resetSackBtn=document.getElementById("resetSackBtn");
+const scanInput=document.getElementById("scanInput");
+
+const result=document.getElementById("result");
+const historyBox=document.getElementById("history");
+const summaryTable=document.getElementById("summaryTable");
+
+const deviceCountEl=document.getElementById("deviceCount");
+const overallCountEl=document.getElementById("overallCount");
+const thisSackScanned=document.getElementById("thisSackScanned");
+const thisSackManual=document.getElementById("thisSackManual");
+const currentSackLabel=document.getElementById("currentSackLabel");
+const fullResetBtn=document.getElementById("fullResetBtn");
+
+let deviceName="";
+let deviceSet=new Set();
+let sackMap={};
+let manualCounts={};
+
+/* SOUND EFFECTS */
+const soundValid=new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
+const soundDup=new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3");
+const soundError=new Audio("https://assets.mixkit.co/active_storage/sfx/2944/2944-preview.mp3");
+
+/* STORAGE */
+function saveState(){
+localStorage.setItem("scannerData",JSON.stringify({
+deviceName,
+deviceSet:[...deviceSet],
+sackMap:Object.fromEntries(Object.entries(sackMap).map(([k,v])=>[k,[...v]])),
+manualCounts,
+rtsDate:rtsDate.value
+}));
+}
+
+function loadState(){
+const saved=localStorage.getItem("scannerData");
+if(!saved) return;
+
+const data=JSON.parse(saved);
+deviceName=data.deviceName||"";
+deviceSet=new Set(data.deviceSet||[]);
+manualCounts=data.manualCounts||{};
+sackMap={};
+if(data.sackMap){
+for(const k in data.sackMap){
+sackMap[k]=new Set(data.sackMap[k]);
+}
+}
+rtsDate.value=data.rtsDate||new Date().toISOString().slice(0,10);
+
+if(deviceName){
+nameSection.style.display="none";
+scanSection.style.display="block";
+}
+deviceCountEl.textContent=deviceSet.size;
+updateSummary();
+updateCurrentSackDisplay();
+updateOverall();
+}
+
+/* NAME START */
+startBtn.addEventListener("click",()=>{
+const name=deviceNameInput.value.trim();
+if(!name){alert("Enter your name first!");return;}
+deviceName=name;
+saveState();
+nameSection.style.display="none";
+scanSection.style.display="block";
+});
+
+/* HISTORY */
+function addHistory(text){
+const div=document.createElement("div");
+div.textContent=text;
+historyBox.prepend(div);
+if(historyBox.children.length>12){
+historyBox.removeChild(historyBox.lastChild);
+}
+}
+
+/* DISPLAY UPDATE */
+function updateCurrentSackDisplay(){
+const sack=sackInput.value.trim();
+currentSackLabel.textContent=sack?`Sack #${sack}`:"Sack #";
+thisSackScanned.textContent=sackMap[sack]?sackMap[sack].size:0;
+thisSackManual.textContent=manualCounts[sack]||0;
+}
+
+function updateSummary(){
+let html='<table><tr><th>Sack #</th><th>Manual</th><th>Scanned</th></tr>';
+for(const sack in manualCounts){
+if(!sackMap[sack]) sackMap[sack]=new Set();
+}
+for(const sack in sackMap){
+html+=`<tr><td>${sack}</td><td>${manualCounts[sack]||0}</td><td>${sackMap[sack].size}</td></tr>`;
+}
+html+='</table>';
+summaryTable.innerHTML=html;
+}
+
+/* OVERALL */
+async function updateOverall(){
+if(!rtsDate.value) return;
+try{
+const res=await fetch(WEB_APP_URL+"?date="+encodeURIComponent(rtsDate.value));
+const data=await res.json();
+overallCountEl.textContent=data.K2||0;
+}catch{
+overallCountEl.textContent=0;
+}
+}
+rtsDate.addEventListener("change",()=>{
+saveState();
+updateOverall();
+});
+
+/* FLASH STATUS */
+function flashStatus(type){
+const card=document.querySelector(".card");
+card.classList.remove("flash-valid","flash-dup","flash-error");
+if(type==="VALID"){card.classList.add("flash-valid"); soundValid.play();}
+if(type==="DUPLICATE"){card.classList.add("flash-dup"); soundDup.play();}
+if(type==="INVALID"){card.classList.add("flash-error"); soundError.play();}
+setTimeout(()=>{card.classList.remove("flash-valid","flash-dup","flash-error");},400);
+}
+
+/* SACK UPLOAD */
+sackUploadBtn.addEventListener("click",()=>{
+const sack=sackInput.value.trim();
+const manual=parseInt(manualCount.value)||0;
+if(!rtsDate.value||!sack||!manual){alert("Complete fields!");return;}
+if(manualCounts[sack]){alert("Sack already used for this date!");return;}
+manualCounts[sack]=manual;
+sackMap[sack]=new Set();
+updateSummary();
+updateCurrentSackDisplay();
+saveState();
+fetch(WEB_APP_URL,{
+method:"POST",
+body:JSON.stringify({type:"SACK_MAPPING",sack,manual,rtsDate:rtsDate.value})
+});
+});
+
+/* RESET SACK ONLY */
+resetSackBtn.addEventListener("click",()=>{
+sackInput.value="";
+manualCount.value="";
+updateCurrentSackDisplay();
+});
+
+/* SCANNING */
+scanInput.addEventListener("keydown",e=>{
+if(e.key==="Enter"){
+const val=scanInput.value.trim().toUpperCase();
+scanInput.value="";
+const sack=sackInput.value.trim();
+if(!sack){alert("Enter Sack # first");return;}
+if(!jntPattern.test(val)){
+result.textContent="INVALID"; flashStatus("INVALID"); addHistory("✖ "+val); upload(val,"INVALID"); return;
+}
+if(deviceSet.has(val)){
+result.textContent="DUPLICATE"; flashStatus("DUPLICATE"); addHistory("⚠ "+val); upload(val,"DUPLICATE"); return;
+}
+deviceSet.add(val);
+sackMap[sack].add(val);
+deviceCountEl.textContent=deviceSet.size;
+updateCurrentSackDisplay();
+updateSummary();
+saveState();
+result.textContent="VALID"; flashStatus("VALID"); addHistory("✔ "+val);
+upload(val,"VALID");
+updateOverall();
+}
+});
+
+function upload(val,status){
+fetch(WEB_APP_URL,{
+method:"POST",
+body:JSON.stringify({
+timestamp:new Date().toLocaleString(),
+waybill:val,
+status:status,
+device:deviceName,
+rtsDate:rtsDate.value,
+sack:sackInput.value.trim()
+})
+});
+}
+
+/* FULL RESET */
+fullResetBtn.addEventListener("click",()=>{
+if(!confirm("Full Reset?"))return;
+localStorage.removeItem("scannerData");
+location.reload();
+});
+
+/* INIT */
+window.onload=loadState;
+</script>
+
+</body>
+</html>
