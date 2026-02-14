@@ -5,9 +5,6 @@
 <title>📦 J&T Waybill Scanner 2.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- CAMERA SCANNER LIBRARY -->
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
 <style>
 :root{
   --bg:#f4f6f8;
@@ -113,14 +110,6 @@ MANUAL INPUT: <b id="thisSackManual">0</b>
 </div>
 
 <input id="scanInput" placeholder="Scan or type J&T waybill">
-
-<!-- CAMERA SCANNER -->
-<div id="reader" style="width:100%; margin-top:10px; border-radius:12px; overflow:hidden;"></div>
-
-<div class="row-flex">
-<button id="startCamBtn" class="btn-blue">Start Camera</button>
-<button id="stopCamBtn" class="btn-red">Stop Camera</button>
-</div>
 
 <div id="result" class="result"></div>
 
@@ -345,59 +334,9 @@ localStorage.removeItem("scannerData");
 location.reload();
 });
 
-/* CAMERA SCANNER */
-let html5QrCode;
-const startCamBtn = document.getElementById("startCamBtn");
-const stopCamBtn = document.getElementById("stopCamBtn");
-
-startCamBtn.addEventListener("click", () => {
-  if (!rtsDate.value || !sackInput.value.trim()) {
-    alert("Upload Sack first before scanning!");
-    return;
-  }
-
-  html5QrCode = new Html5Qrcode("reader");
-
-  Html5Qrcode.getCameras().then(devices => {
-    if (devices && devices.length) {
-      const cameraId = devices[0].id; // default camera
-
-      Html5Qrcode.getCameras().then(devices => {
-    if (devices && devices.length) {
-      // Hanapin yung rear/back camera
-      let backCamera = devices.find(cam => /back|environment/gi.test(cam.label)) || devices[0];
-      
-      html5QrCode.start(
-        backCamera.id,
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 100 }
-        },
-        (decodedText) => {
-          scanInput.value = decodedText.toUpperCase();
-          scanInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
-        },
-        (errorMessage) => {
-          // ignore scan errors
-        }
-      );
-    }
-}).catch(err => {
-    alert("Camera not found or permission denied.");
-});
-
-stopCamBtn.addEventListener("click", () => {
-  if (html5QrCode) {
-    html5QrCode.stop().then(() => {
-      document.getElementById("reader").innerHTML = "";
-    });
-  }
-});
-
 /* INIT */
 window.onload=loadState;
 </script>
 
 </body>
 </html>
-
