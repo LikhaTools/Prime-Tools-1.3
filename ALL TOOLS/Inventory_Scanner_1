@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Warehouse Scanner</title>
+
+<style>
+body{
+font-family:Arial;
+padding:15px;
+background:#f5f5f5;
+}
+
+.container{
+max-width:400px;
+margin:auto;
+background:#fff;
+padding:20px;
+border-radius:12px;
+box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+h2{
+text-align:center;
+}
+
+input,button{
+width:100%;
+font-size:18px;
+padding:12px;
+margin:8px 0;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+button{
+background:#007bff;
+color:white;
+border:none;
+}
+
+button.out{
+background:#dc3545;
+}
+
+#reader{
+margin-top:10px;
+}
+
+.guide{
+border:2px dashed #aaa;
+height:120px;
+display:flex;
+align-items:center;
+justify-content:center;
+margin-top:10px;
+font-size:14px;
+color:#666;
+}
+
+.status{
+text-align:center;
+margin-top:10px;
+font-weight:bold;
+}
+
+.success{color:green;}
+.error{color:red;}
+
+table{
+width:100%;
+margin-top:15px;
+border-collapse:collapse;
+font-size:12px;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:6px;
+text-align:left;
+}
+
+th{
+background:#f0f0f0;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+<h2>📦 Scanner</h2>
+
+<input type="text" id="barcode" placeholder="Scan Barcode">
+
+<button onclick="markBox('IN')">Stock In</button> <button class="out" onclick="markBox('OUT')">Stock Out</button>
+
+<div class="guide">
+🎯 I-tutok dito ang barcode
+</div>
+
+<div id="status" class="status"></div>
+
+<table id="boxTable">
+<thead>
+<tr>
+<th>Item</th>
+<th>Time</th>
+<th>Barcode</th>
+<th>Status</th>
+<th>Staff</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<script>
+
+const WEB_APP_URL="https://script.google.com/macros/s/AKfycby5Czt0r6qEPkv0bZCWxXCqnU67jhHeiFKSJjqdrugq2FNUm-yjETcY7CXVTwDa8VhEdA/exec";
+
+// ===== BARCODE VALIDATION =====
+function isValidBarcode(code){
+return /^ITM-\d{4}-\d{4}-\d{4}$/.test(code);
+}
+
+// ===== STAFF (ONCE PER DAY) =====
+function getStaff(){
+let today = new Date().toDateString();
+let saved = localStorage.getItem("staffData");
+
+if(saved){
+let obj = JSON.parse(saved);
+if(obj.date === today){
+return obj.name;
+}
+}
+
+let name = prompt("Enter your full name:");
+if(!name){
+alert("Name required.");
+return null;
+}
+
+localStorage.setItem("staffData", JSON.stringify({
+name:name,
+date:today
+}));
+
+return name;
+}
+
+// ===== STATUS MESSAGE =====
+function setStatus(msg,type){
+let el=document.getElementById("status");
+el.innerText=msg;
+el.className="status "+type;
+}
+
+// ===== FETCH TABLE =====
+function fetchBoxStatus(){
+fetch(WEB_APP_URL)
+.then(res=>res.json())
+.then(data=>{
+const tbody=document.querySelector("#boxTable tbody");
+tbody.innerHTML="";
+
+data.slice(1).forEach(row=>{
+if(!row[2]) return; // skip empty
+
+const tr=document.createElement("tr");
+tr.innerHTML=`
+<td>${row[0]}</td>
+<td>${row[1]}</td>
+<td>${row[2]}</td>
+<td>${row[3]}</td>
+<td>${row[4]}</td>
+`;
+tbody.appendChild(tr);
+});
+});
+}
+
+// ===== MAIN ACTION =====
+function markBox(action){
+
+const barcode=document.getElementById("barcode").value.trim();
+
+if(!isValidBarcode(barcode)){
+setStatus("Invalid barcode format. Use ITM-0000-0000-0000","error");
+return;
+}
+
+const staff=getStaff();
+if(!staff) return;
+
+let message = `
+Confirm Transaction
+
+Barcode: ${barcode}
+Action: ${action === "IN" ? "STOCK IN" : "STOCK OUT"}
+
+Do you want to proceed?
+`;
+
+if(!confirm(message)) return;
+
+fetch(WEB_APP_URL,{
+method:"POST",
+body:JSON.stringify({
+barcode:barcode,
+action:action,
+staff:staff
+})
+})
+.then(res=>res.json())
+.then(data=>{
+setStatus("Transaction recorded successfully","success");
+document.getElementById("barcode").value="";
+fetchBoxStatus();
+})
+.catch(()=>{
+setStatus("Upload failed","error");
+});
+
+}
+
+// ===== CAMERA SCAN =====
+function onScanSuccess(decodedText){
+document.getElementById("barcode").value=decodedText;
+}
+
+// START CAMERA
+const html5QrcodeScanner = new Html5QrcodeScanner(
+"reader",
+{fps:10,qrbox:200}
+);
+html5QrcodeScanner.render(onScanSuccess);
+
+// AUTO LOAD
+fetchBoxStatus();
+
+</script>
+
+</body>
+</html>
