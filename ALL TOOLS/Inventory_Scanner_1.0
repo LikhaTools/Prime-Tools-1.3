@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Warehouse Scanner - BOX_STATUS (TODAY)</title>
+<style>
+body{font-family:Arial;padding:20px;}
+input,button{font-size:16px;padding:8px;margin:5px 0;}
+table{border-collapse:collapse;width:100%;margin-top:20px;}
+th,td{border:1px solid #ccc;padding:8px;text-align:left;}
+th{background:#f4f4f4;}
+#reader{width:300px;margin-top:10px;}
+</style>
+</head>
+<body>
+
+<h2>📦 Warehouse Scanner - BOX_STATUS (TODAY)</h2>
+
+<label>Scan Barcode:</label><br>
+<input type="text" id="barcode" placeholder="Scan or type barcode"><br>
+<button onclick="markBox('IN')">Mark IN</button>
+<button onclick="markBox('OUT')">Mark OUT</button>
+
+<div id="reader"></div>
+
+<h3>Box Status (Today)</h3>
+<table id="boxTable">
+<thead>
+<tr>
+  <th>Item Name</th>
+  <th>Timestamp</th>
+  <th>Barcode</th>
+  <th>Action</th>
+  <th>Staff</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby5Czt0r6qEPkv0bZCWxXCqnU67jhHeiFKSJjqdrugq2FNUm-yjETcY7CXVTwDa8VhEdA/exec";
+
+// Fetch latest data from BOX_STATUS (TODAY)
+function fetchBoxStatus(){
+  fetch(WEB_APP_URL)
+    .then(res => res.json())
+    .then(data => {
+      const tbody = document.querySelector("#boxTable tbody");
+      tbody.innerHTML = "";
+
+      data.slice(1).forEach(row => {
+        // row[0] = Item Name
+        // row[1] = Timestamp
+        // row[2] = Barcode
+        // row[3] = Action
+        // row[4] = Staff
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row[0]}</td>
+          <td>${row[1]}</td>
+          <td>${row[2]}</td>
+          <td>${row[3]}</td>
+          <td>${row[4]}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+    })
+    .catch(err => console.log("Fetch Error:", err));
+}
+
+// Mark IN/OUT button
+function markBox(action){
+  const barcode = document.getElementById("barcode").value.trim();
+  if(!barcode){ alert("Please scan a barcode first"); return; }
+  if(!confirm(action + " this barcode?\n" + barcode)) return;
+
+  const staff = prompt("Enter Staff Name");
+  if(!staff){ alert("Staff name required"); return; }
+
+  fetch(WEB_APP_URL, {
+    method: "POST",
+    body: JSON.stringify({barcode:barcode, action:action, staff:staff})
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(!data.success){ alert("Upload failed"); return; }
+    document.getElementById("barcode").value="";
+    document.getElementById("barcode").focus();
+    fetchBoxStatus();
+  })
+  .catch(err => alert("Upload Error: " + err));
+}
+
+// Camera scan (populate input only)
+function onScanSuccess(decodedText){
+  document.getElementById("barcode").value = decodedText;
+  fetchBoxStatus();
+}
+
+// Camera scanner
+const html5QrcodeScanner = new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
+html5QrcodeScanner.render(onScanSuccess);
+
+// Auto-focus
+document.getElementById("barcode").focus();
+
+// Fetch table when manual input
+document.getElementById("barcode").addEventListener("change", fetchBoxStatus);
+
+// Fetch table on page load
+fetchBoxStatus();
+</script>
+</body>
+</html>
