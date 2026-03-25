@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Inventory Mega UI (Final Pro)</title>
+<title>Inventory Mega (Pro)</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
@@ -18,13 +18,14 @@ body{
   display:flex;
   height:100vh;
   position:relative;
+  margin-left:25px; /* spacing ng buong layout */
 }
 
 /* TOP CORNER TITLE */
 .topTitle{
   position:fixed;
   top:12px;
-  left:20px;
+  left:45px; /* 👈 20px + 25px para pantay sa container */
   font-size:18px;
   font-weight:700;
   color:#4f46e5;
@@ -224,7 +225,7 @@ tr.restock td{
 </head>
 
 <body>
-<div class="topTitle">Stock Dashboard</div>
+<div class="topTitle">Stock/Restock Dashboard</div>
 
 <div class="container">
   <div class="left">
