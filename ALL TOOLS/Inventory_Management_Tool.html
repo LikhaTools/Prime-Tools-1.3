@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Inventory Mega UI (Final Pro)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+body{
+  font-family:'Inter',sans-serif;
+  margin:0;
+  background:#f5f5f5;
+  color:#111;
+  overflow:hidden;
+}
+
+.container{
+  display:flex;
+  height:100vh;
+  position:relative;
+}
+
+/* TOP CORNER TITLE */
+.topTitle{
+  position:fixed;
+  top:12px;
+  left:20px;
+  font-size:18px;
+  font-weight:700;
+  color:#4f46e5;
+  z-index:1000;
+  letter-spacing:0.5px;
+}
+
+/* LEFT PANEL */
+.left{
+  width:27%;
+  background:#fff;
+  padding:60px 12px 16px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  font-size:13px;
+  overflow-y:auto;
+  box-sizing:border-box;
+}
+
+/* INPUT HEADER */
+.left h3{
+  margin:0 0 10px 0;
+  font-size:16px;
+}
+
+/* LABELS ABOVE TEXTAREAS */
+.inputLabel{
+  font-weight:600;
+  margin:6px 0 2px 0;
+  font-size:12px;
+  color:#4f46e5;
+}
+
+/* TEXTAREAS & INPUTS */
+textarea,input,select{
+  width:100%;
+  padding:6px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  background:#fafafa;
+  color:#111;
+  resize:none;
+  font-size:13px;
+  box-sizing:border-box;
+  height:65px;
+  margin-bottom:8px;
+}
+
+/* BUTTONS */
+.leftButtons{
+  margin-top:8px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.left button{
+  width:100%;
+  padding:8px;
+  border-radius:10px;
+  background:#fff;
+  color:#111;
+  font-weight:600;
+  cursor:pointer;
+  border:1px solid #000;
+  transition: all 0.3s ease;
+  position:relative;
+}
+.left button:hover{
+  background:#000;
+  color:#fff;
+  transform:scale(1.03);
+}
+.left button::after{
+  content:'';
+  position:absolute;
+  width:0;
+  height:0;
+  background:rgba(0,0,0,0.2);
+  border-radius:50%;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  transition:0.4s;
+}
+.left button:active::after{
+  width:150px;
+  height:150px;
+  opacity:0;
+}
+
+/* RIGHT PANEL */
+.right{
+  flex:1;
+  position:relative;
+  overflow:auto;
+  padding:20px;
+  font-size:13px;
+}
+
+/* EMPTY STATE */
+.empty{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  color:#888;
+  font-size:14px;
+  font-weight:600;
+}
+
+/* Fade animation for loading text */
+@keyframes fadeInOut{
+  0%,100%{opacity:0.2;}
+  50%{opacity:1;}
+}
+
+/* MEGA TABLE */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-bottom:20px;
+  font-size:13px;
+  background:#fff;
+  border-radius:10px;
+  overflow:hidden;
+  table-layout:fixed;
+}
+th,td{
+  border:1px solid #ddd;
+  padding:6px 8px;
+  text-align:center;
+  transition: all 0.3s ease;
+}
+th{
+  background:#e0e0e0;
+  font-weight:600;
+}
+td.big{
+  font-weight:700;
+  font-size:16px;
+}
+th:nth-child(1), td:nth-child(1){
+  width:40%;
+  text-align:left;
+  padding-left:10px;
+  white-space:normal;
+}
+th:nth-child(n+2), td:nth-child(n+2){
+  width:12%;
+}
+tr{
+  height:36px;
+  background:#fafafa; /* default row color */
+}
+
+/* Red highlight if Restock > 0 */
+tr.restock td{
+  background:#ffcccc !important;
+}
+
+.classHeader{
+  background:#4f46e5;
+  color:#fff;
+  font-weight:600;
+  text-align:left;
+  padding:8px;
+  font-size:14px;
+}
+
+/* FEED CARDS */
+.feed{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:14px;
+  margin-top:10px;
+}
+.itemBox{
+  background:#fff;
+  padding:12px;
+  border-radius:10px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  font-size:12px;
+  transition: transform 0.3s, background 0.3s;
+}
+.itemBox:hover{
+  transform:translateY(-3px) scale(1.02);
+}
+.title{font-size:15px;font-weight:600;}
+.sub{font-size:11px;color:#555;}
+.big{font-size:18px;font-weight:700;}
+</style>
+</head>
+
+<body>
+<div class="topTitle">Stock Dashboard</div>
+
+<div class="container">
+  <div class="left">
+    <div>
+      <h3>📥 INPUT</h3>
+
+      <div class="inputLabel">HOLD ORDERS</div>
+      <textarea id="hold" placeholder="Hold (Item, Hold, Within10d)"></textarea>
+
+      <div class="inputLabel">SHIPPED STOCK</div>
+      <textarea id="shipped" placeholder="Shipped"></textarea>
+
+      <div class="inputLabel">RETURN TO SENDER</div>
+      <textarea id="rts" placeholder="RTS"></textarea>
+
+      <div class="inputLabel">SUPPLY IN</div>
+      <textarea id="supplier" placeholder="Supplier (ITEM - QTY)"></textarea>
+    </div>
+
+    <div class="leftButtons">
+      <button onclick="runAll()">Compute</button>
+      <button onclick="copyTableAsImage()">📋 Copy Table as Image</button>
+      <button onclick="upload()">Upload</button>
+    </div>
+  </div>
+
+  <div class="right">
+    <div id="empty" class="empty"><span style="animation:fadeInOut 1s ease infinite;">📊 No data yet<br>Click Compute</span></div>
+    <div id="output"></div>
+    <div id="feed" class="feed"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+const WEBAPP_CLASS_URL = "https://script.google.com/macros/s/AKfycbwXb5pFXLcsX1w8XF0NPZSzZVd-r9D55GTlJUGKMlUsLVvieYqtG5X2dXTt384F_J4S2g/exec";
+
+function pcs(name){ const m=name.match(/^(\d+)\s*x/i); return m?Number(m[1]):1; }
+function clean(name){ return name.replace(/^\d+\s*x\s*/i,'').trim().toUpperCase(); }
+function num(v){ return Number(String(v||0).replace(/,/g,'')) || 0; }
+function round100(n){ return n<=0 ? 0 : Math.ceil(n/100)*100; }
+function skipHeader(val){ return /Item Name|Item|Total/i.test(val); }
+
+function parseSheet(text,isHold=false){
+  const map={};
+  text.split('\n').forEach(l=>{
+    const c=l.split(/\t+/);
+    if(!c[1] || skipHeader(c[0])) return;
+    const raw=c[0];
+    const item=clean(raw);
+    const mult=pcs(raw);
+    const val1=num(c[1]);
+    const val2=num(c[2]||0);
+    if(!map[item]) map[item]={hold:0,within:0,rts:0};
+    if(isHold){
+      map[item].hold += val1*mult;
+      map[item].within += val2*mult;
+    } else {
+      map[item].rts += val2*mult;
+    }
+  });
+  return map;
+}
+
+function parseShipped(text){
+  const map={};
+  text.split('\n').forEach(l=>{
+    const c=l.split(/\t+/);
+    if(!c[1] || skipHeader(c[0])) return;
+    const item=clean(c[0]);
+    map[item]=(map[item]||0)+num(c[1])*pcs(c[0]);
+  });
+  return map;
+}
+
+function parseSupplier(text){
+  const map={};
+  text.split('\n').forEach(l=>{
+    if(!l.trim()) return;
+    const parts=l.split('-');
+    if(parts.length<2) return;
+    const qty=num(parts.pop().trim());
+    const rawName=parts.join('-').trim();
+    const item=clean(rawName);
+    map[item]=(map[item]||0)+qty;
+  });
+  return map;
+}
+
+let classMap={}, finalData=[];
+let loadingInterval;
+
+async function runAll() {
+  const emptyEl = document.getElementById('empty');
+  const feedDiv = document.getElementById('feed');
+  feedDiv.innerHTML = '';
+  emptyEl.style.display = 'block';
+
+  // Loading animation: emoji + dots
+  let dots = 0;
+  const emojis = ['⏳','⚙️','🔄'];
+  let emojiIndex = 0;
+
+  loadingInterval = setInterval(()=>{
+    dots = (dots+1)%4;
+    if(dots===0) emojiIndex = (emojiIndex+1)%emojis.length;
+    emptyEl.innerHTML = `<span style="animation:fadeInOut 0.8s ease infinite;">${emojis[emojiIndex]} Computing${'.'.repeat(dots)}</span>`;
+  }, 400);
+
+  try{
+    const res = await fetch(WEBAPP_CLASS_URL);
+    const data = await res.json();
+    classMap={};
+    data.classMap.forEach(r=>{
+      classMap[r.name.toUpperCase()] = {
+        class:r.class,
+        factor:Number(r.factor||5),
+        stock:Number(r.stock||0)
+      };
+    });
+
+    await new Promise(res=>setTimeout(res,500));
+    compute();
+  } catch(e){
+    emptyEl.innerHTML = "<p style='color:red;'>Error fetching data!</p>";
+  } finally {
+    clearInterval(loadingInterval);
+  }
+}
+
+function compute(){
+  const holdMap=parseSheet(document.getElementById('hold').value,true);
+  const shippedMap=parseShipped(document.getElementById('shipped').value);
+  const rtsMap=parseSheet(document.getElementById('rts').value);
+  const supplierMap=parseSupplier(document.getElementById('supplier').value);
+
+  const items=new Set([
+    ...Object.keys(classMap),
+    ...Object.keys(holdMap),
+    ...Object.keys(shippedMap),
+    ...Object.keys(rtsMap),
+    ...Object.keys(supplierMap)
+  ]);
+
+  finalData=[];
+
+  items.forEach(itemRaw=>{
+    const item=clean(itemRaw);
+
+    const holdQty=holdMap[item]?.hold||0;
+    const within10=holdMap[item]?.within||0;
+    const shippedQty=shippedMap[item]||0;
+    const rtsQty=rtsMap[item]?.rts||0;
+    const supplierQty=supplierMap[item]||0;
+
+    const clsInfo=classMap[item]||{class:'C_FOR_HOLD',factor:5,stock:0};
+
+    let safeStock = clsInfo.stock + supplierQty + rtsQty - shippedQty;
+    safeStock = Math.max(safeStock,0);
+
+    const avgOrder = within10>0 ? within10/10 : 0;
+
+    let restock=0, remaining=0;
+
+    if(clsInfo.class==='A'){
+      restock = round100(Math.max(holdQty+within10-safeStock,0));
+      remaining = avgOrder>0 ? Math.floor(safeStock/avgOrder) : 0;
+    } else if(clsInfo.class==='B'){
+      restock = round100(Math.max(avgOrder*clsInfo.factor+holdQty-safeStock,0));
+      remaining = avgOrder>0 ? Math.floor(safeStock/avgOrder) : 0;
+    } else if(clsInfo.class==='C_CLEARANCE'){
+      restock = Math.max(holdQty-safeStock,0);
+      remaining = avgOrder>0 ? Math.floor(safeStock/avgOrder) : 0;
+    } else {
+      restock = Math.max(holdQty-safeStock,0);
+      remaining = 0;
+    }
+
+    finalData.push({
+      item,
+      cls:clsInfo.class,
+      stock:safeStock,
+      hold:holdQty,
+      days:remaining,
+      avg:Math.round(avgOrder),
+      restock,
+      factor:clsInfo.factor
+    });
+  });
+
+  render();
+}
+
+function render(){
+  let filtered = finalData.filter(r=>!(r.stock===0 && r.hold===0 && r.avg===0));
+  document.getElementById('empty').style.display = filtered.length ? 'none' : 'block';
+
+  const groups={A:[],B_5:[],B_3:[],C_FOR_HOLD:[],C_CLEARANCE:[]};
+
+  filtered.forEach(r=>{
+    if(r.cls==='A') groups.A.push(r);
+    else if(r.cls==='B'){
+      if(r.factor===5) groups.B_5.push(r);
+      else groups.B_3.push(r);
+    }
+    else if(r.cls==='C_FOR_HOLD') groups.C_FOR_HOLD.push(r);
+    else if(r.cls==='C_CLEARANCE') groups.C_CLEARANCE.push(r);
+    else groups.C_FOR_HOLD.push(r);
+  });
+
+  function sortItems(arr){
+    return arr.sort((a,b)=>{
+      if(b.restock!==a.restock) return b.restock-a.restock;
+      return b.stock-a.stock;
+    });
+  }
+
+  Object.keys(groups).forEach(k=>groups[k]=sortItems(groups[k]));
+
+  function makeTable(title, arr){
+    if(arr.length===0) return "";
+    let html=`<div class="classHeader">${title}</div>`;
+    html+=`<table>
+    <tr><th>Item</th><th>Stock</th><th>Hold</th><th>Remaining</th><th>Avg</th><th>Restock</th></tr>`;
+    arr.forEach(r=>{
+      const rowClass = r.restock>0 ? "restock" : "";
+      html+=`<tr class="${rowClass}">
+        <td>${r.item}</td>
+        <td class="big" data-value="${r.stock}">0</td>
+        <td class="big" data-value="${r.hold}">0</td>
+        <td class="big" data-value="${r.days}">0</td>
+        <td class="big" data-value="${r.avg}">0</td>
+        <td class="big" data-value="${r.restock}">0</td>
+      </tr>`;
+    });
+    html+="</table>";
+    return html;
+  }
+
+  let html="";
+  html+=makeTable("Class A (10 Days)", groups.A);
+  html+=makeTable("Class B (5 Days)", groups.B_5);
+  html+=makeTable("Class B (3 Days)", groups.B_3);
+  html+=makeTable("Class C (For Hold)", groups.C_FOR_HOLD);
+  html+=makeTable("Class C (Clearance)", groups.C_CLEARANCE);
+
+  document.getElementById('output').innerHTML=html;
+
+  const nums = document.querySelectorAll('.big');
+  nums.forEach(el=>{
+    let endVal = Number(el.getAttribute('data-value'));
+    let start = 0;
+    const step = () => {
+      start += Math.ceil(endVal/20);
+      if(start>=endVal) start=endVal;
+      el.textContent=start;
+      if(start<endVal) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+
+  const feedDiv = document.getElementById('feed');
+  feedDiv.innerHTML = '';
+  filtered.forEach(r => {
+    const box = document.createElement('div');
+    box.className = 'itemBox';
+    if(r.restock > 0) box.style.background = '#ffcccc';
+    box.innerHTML = `
+      <div class="title">${r.item}</div>
+      <div class="sub">Class: ${r.cls}</div>
+      <div style="display:flex; justify-content:space-between; margin-top:5px;">
+        <div><div class="big">${r.stock}</div><div class="sub">Stock</div></div>
+        <div><div class="big">${r.days}</div><div class="sub">Remaining Days</div></div>
+        <div><div class="big">${r.restock}</div><div class="sub">Restock</div></div>
+      </div>
+    `;
+    feedDiv.appendChild(box);
+  });
+}
+
+function copyTableAsImage(){
+  const outputEl = document.getElementById('output');
+  html2canvas(outputEl).then(canvas=>{
+    canvas.toBlob(blob => {
+      const item = new ClipboardItem({'image/png': blob});
+      navigator.clipboard.write([item]).then(()=>{
+        alert("Table copied as image to clipboard ✅");
+      }).catch(e=>{
+        alert("Failed to copy image: "+e);
+      });
+    });
+  });
+}
+
+function upload(){
+  const stockRows = finalData.map(r => ({item: r.item, qty: r.stock}));
+  const holdText=document.getElementById('hold').value;
+  const holdRows=[];
+  holdText.split('\n').forEach(line=>{
+    if(!line.trim()) return;
+    const parts=line.split(/\t+/);
+    if(!parts[1]) return;
+    holdRows.push({item: parts[0], qty: num(parts[1])});
+  });
+
+  fetch(WEBAPP_CLASS_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({STOCK_UPLOAD:stockRows,HOLD_UPLOAD:holdRows})
+  });
+
+  alert("Uploaded!");
+}
+</script>
+</body>
+</html>
