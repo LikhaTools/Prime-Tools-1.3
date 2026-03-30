@@ -1,252 +1,278 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Warehouse Scanner</title>
-
-<style>
-body{
-font-family:Arial;
-padding:15px;
-background:#f5f5f5;
-}
-
-.container{
-max-width:400px;
-margin:auto;
-background:#fff;
-padding:20px;
-border-radius:12px;
-box-shadow:0 0 10px rgba(0,0,0,0.1);
-}
-
-h2{
-text-align:center;
-}
-
-input,button{
-width:100%;
-font-size:18px;
-padding:12px;
-margin:8px 0;
-border-radius:8px;
-border:1px solid #ccc;
-}
-
-button{
-background:#007bff;
-color:white;
-border:none;
-}
-
-button.out{
-background:#dc3545;
-}
-
-#reader{
-margin-top:10px;
-}
-
-.guide{
-border:2px dashed #aaa;
-height:120px;
-display:flex;
-align-items:center;
-justify-content:center;
-margin-top:10px;
-font-size:14px;
-color:#666;
-}
-
-.status{
-text-align:center;
-margin-top:10px;
-font-weight:bold;
-}
-
-.success{color:green;}
-.error{color:red;}
-
-table{
-width:100%;
-margin-top:15px;
-border-collapse:collapse;
-font-size:12px;
-}
-
-th,td{
-border:1px solid #ddd;
-padding:6px;
-text-align:left;
-}
-
-th{
-background:#f0f0f0;
-}
-</style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Inventory Pro v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        .tab-content { display: none; }
+        .active-tab { display: block; }
+        .nav-active { color: #2563eb; border-top: 3px solid #2563eb; }
+        @media print { .no-print { display: none; } #printArea { display: block !important; } }
+    </style>
 </head>
-<body>
+<body class="bg-gray-50 font-sans pb-24">
 
-<div class="container">
+    <div id="loginOverlay" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-6">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm">
+            <div class="text-center mb-8">
+                <div class="bg-blue-600 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center text-white text-3xl font-bold">S</div>
+                <h1 class="text-2xl font-black text-gray-800 tracking-tight">INVENTORY PRO <span class="text-blue-600">v2</span></h1>
+                <p class="text-gray-500 text-sm">Please sign in to continue</p>
+            </div>
+            <div class="space-y-4">
+                <input id="userName" type="text" placeholder="Username" class="w-full p-4 bg-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                <input id="userPass" type="password" placeholder="Password" class="w-full p-4 bg-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl font-bold transition-all transform active:scale-95 shadow-lg">Verify & Launch</button>
+                <p id="loginError" class="text-red-500 text-xs text-center hidden">❌ Invalid user or password.</p>
+            </div>
+        </div>
+    </div>
 
-<h2>📦 Scanner</h2>
+    <header class="bg-white border-b p-4 sticky top-0 z-40 flex justify-between items-center shadow-sm no-print">
+        <div>
+            <h2 class="font-bold text-gray-800 leading-none" id="displayUser">Guest</h2>
+            <span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider mt-1 inline-block" id="displayRole">Role</span>
+        </div>
+        <div id="statusIndicator" class="flex items-center gap-2">
+            <span class="text-[10px] text-gray-400 font-bold uppercase">System Live</span>
+            <div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+        </div>
+    </header>
 
-<input type="text" id="barcode" placeholder="Scan Barcode">
+    <main class="p-4 max-w-2xl mx-auto no-print">
+        
+        <div id="home" class="tab-content active-tab">
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-gray-400 text-xs font-bold uppercase">In-Stock</p>
+                    <p class="text-2xl font-black text-gray-800" id="statStock">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-gray-400 text-xs font-bold uppercase">Transactions</p>
+                    <p class="text-2xl font-black text-gray-800" id="statTrans">0</p>
+                </div>
+            </div>
+            
+            <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <span>🕒</span> Recent Activity
+            </h3>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <tbody id="transTableBody" class="divide-y divide-gray-50">
+                        <tr class="text-gray-400"><td class="p-8 text-center">Fetching latest data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-<button onclick="markBox('IN')">Stock In</button> <button class="out" onclick="markBox('OUT')">Stock Out</button>
+        <div id="generate" class="tab-content">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                <h3 class="font-black text-gray-800 mb-4">BARCODE GENERATOR</h3>
+                <div class="space-y-3">
+                    <input id="genName" type="text" placeholder="Item Name (e.g. iPhone 15)" class="w-full p-3 border rounded-xl">
+                    <input id="genCode" type="text" placeholder="SKU Code" class="w-full p-3 border rounded-xl font-mono">
+                    <input id="genQty" type="number" placeholder="How many copies?" class="w-full p-3 border rounded-xl">
+                    <button onclick="generateBarcodes()" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold shadow-md">Generate & Print List</button>
+                </div>
+            </div>
+        </div>
 
-<div class="guide">
-🎯 I-tutok dito ang barcode
-</div>
+        <div id="scan" class="tab-content">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-center">
+                <div class="flex bg-gray-100 p-1 rounded-xl mb-4">
+                    <button onclick="setScanMode('IN')" id="btnIn" class="flex-1 py-3 rounded-lg font-bold transition-all bg-white shadow-sm text-green-600">STOCK IN</button>
+                    <button onclick="setScanMode('OUT')" id="btnOut" class="flex-1 py-3 rounded-lg font-bold transition-all text-gray-500">STOCK OUT</button>
+                </div>
+                <div id="reader" class="w-full rounded-xl overflow-hidden bg-black aspect-square"></div>
+                <div id="scanResult" class="mt-4 p-4 rounded-xl bg-gray-100 text-xs font-mono break-all text-gray-500 border-2 border-dashed">
+                    Scanner Ready... Point at a Barcode
+                </div>
+            </div>
+        </div>
 
-<div id="status" class="status"></div>
+        <div id="audit" class="tab-content">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-black text-gray-800 mb-2 italic">AUDIT MODE</h3>
+                <p class="text-sm text-gray-500 mb-4">Verify current floor stock against system records.</p>
+                <select id="auditMode" class="w-full p-4 bg-gray-50 border rounded-xl mb-4 font-bold">
+                    <option value="AM">MORNING OPENING</option>
+                    <option value="PM">EVENING CLOSING</option>
+                </select>
+                <button onclick="switchTab('scan')" class="w-full bg-orange-500 text-white p-4 rounded-xl font-bold">Start Audit Scan</button>
+            </div>
+        </div>
+    </main>
 
-<table id="boxTable">
-<thead>
-<tr>
-<th>Item</th>
-<th>Time</th>
-<th>Barcode</th>
-<th>Status</th>
-<th>Staff</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
+    <div id="printArea" class="hidden bg-white min-h-screen p-4 flex flex-wrap gap-4 justify-center"></div>
 
-</div>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-40 no-print shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+        <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center text-gray-400 nav-active" id="nav-home">
+            <span class="text-xl">🏠</span><span class="text-[10px] font-bold mt-1">Home</span>
+        </button>
+        <button onclick="switchTab('generate')" class="nav-btn flex flex-col items-center text-gray-400" id="nav-generate">
+            <span class="text-xl">🏷️</span><span class="text-[10px] font-bold mt-1">Generate</span>
+        </button>
+        <button onclick="switchTab('scan')" class="nav-btn flex flex-col items-center text-gray-400" id="nav-scan">
+            <span class="text-xl">📸</span><span class="text-[10px] font-bold mt-1">Scan</span>
+        </button>
+        <button onclick="switchTab('audit')" class="nav-btn flex flex-col items-center text-gray-400" id="nav-audit">
+            <span class="text-xl">📋</span><span class="text-[10px] font-bold mt-1">Audit</span>
+        </button>
+    </nav>
 
-<script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        // --- CONFIGURATION ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDx-oLwLnU0GLEE6FnAhedtIImdnIdJAZtQlwSfe4pNd1aieGCJyjLIYlT6VIuZ5jR/exec";
 
-<script>
+        let currentUser = "";
+        let currentRole = "";
+        let scanMode = "IN";
+        let lastScanTime = 0;
+        let html5QrCode;
 
-const WEB_APP_URL="https://script.google.com/macros/s/AKfycby5Czt0r6qEPkv0bZCWxXCqnU67jhHeiFKSJjqdrugq2FNUm-yjETcY7CXVTwDa8VhEdA/exec";
+        // --- AUTH LOGIC (DATABASE CHECK) ---
+        async function handleLogin() {
+            const user = document.getElementById('userName').value;
+            const pass = document.getElementById('userPass').value;
+            const btn = document.getElementById('loginBtn');
+            const errorMsg = document.getElementById('loginError');
 
-// ===== BARCODE VALIDATION =====
-function isValidBarcode(code){
-return /^ITM-\d{4}-\d{4}-\d{4}$/.test(code);
-}
+            if(!user || !pass) return alert("Fill in details");
 
-// ===== STAFF (ONCE PER DAY) =====
-function getStaff(){
-let today = new Date().toDateString();
-let saved = localStorage.getItem("staffData");
+            btn.disabled = true;
+            btn.innerHTML = "Authenticating...";
 
-if(saved){
-let obj = JSON.parse(saved);
-if(obj.date === today){
-return obj.name;
-}
-}
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'LOGIN_CHECK', username: user, password: pass })
+                });
+                const result = await response.json();
 
-let name = prompt("Enter your full name:");
-if(!name){
-alert("Name required.");
-return null;
-}
+                if(result.success) {
+                    currentUser = user;
+                    currentRole = result.role;
+                    document.getElementById('displayUser').innerText = currentUser;
+                    document.getElementById('displayRole').innerText = currentRole;
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    fetchDashboardData();
+                } else {
+                    errorMsg.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.innerHTML = "Verify & Launch";
+                }
+            } catch(e) {
+                alert("Connection Error. Is SCRIPT_URL correct?");
+                btn.disabled = false;
+            }
+        }
 
-localStorage.setItem("staffData", JSON.stringify({
-name:name,
-date:today
-}));
+        // --- NAVIGATION ---
+        function switchTab(tabId) {
+            // Restriction: Only Marketing can use Generate
+            if(tabId === 'generate' && currentRole !== 'Marketing') {
+                alert("⚠️ Access Denied: For Marketing Role only.");
+                return;
+            }
 
-return name;
-}
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
+            document.getElementById(tabId).classList.add('active-tab');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('nav-active'));
+            document.getElementById('nav-' + tabId).classList.add('nav-active');
 
-// ===== STATUS MESSAGE =====
-function setStatus(msg,type){
-let el=document.getElementById("status");
-el.innerText=msg;
-el.className="status "+type;
-}
+            if(tabId === 'scan') startScanner(); else stopScanner();
+        }
 
-// ===== FETCH TABLE =====
-function fetchBoxStatus(){
-fetch(WEB_APP_URL)
-.then(res=>res.json())
-.then(data=>{
-const tbody=document.querySelector("#boxTable tbody");
-tbody.innerHTML="";
+        // --- DASHBOARD DATA ---
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'GET_DASHBOARD' }) });
+                const data = await response.json();
+                
+                // Update Stats
+                document.getElementById('statStock').innerText = data.stock.length;
+                document.getElementById('statTrans').innerText = data.trans.length;
 
-data.slice(1).forEach(row=>{
-if(!row[2]) return; // skip empty
+                // Render Table
+                const tbody = document.getElementById('transTableBody');
+                tbody.innerHTML = data.trans.map(tr => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4">
+                            <p class="font-bold text-gray-800">${tr[3]}</p>
+                            <p class="text-[10px] text-gray-400">${new Date(tr[0]).toLocaleTimeString()}</p>
+                        </td>
+                        <td class="p-4 text-right">
+                            <span class="px-2 py-1 rounded text-[10px] font-bold ${tr[2] === 'IN' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">${tr[2]}</span>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch(e) { console.log("Refresh failed"); }
+        }
 
-const tr=document.createElement("tr");
-tr.innerHTML=`
-<td>${row[0]}</td>
-<td>${row[1]}</td>
-<td>${row[2]}</td>
-<td>${row[3]}</td>
-<td>${row[4]}</td>
-`;
-tbody.appendChild(tr);
-});
-});
-}
+        // --- BARCODE GEN ---
+        function generateBarcodes() {
+            const name = document.getElementById('genName').value;
+            const code = document.getElementById('genCode').value;
+            const qty = document.getElementById('genQty').value;
+            const container = document.getElementById('printArea');
+            
+            if(!name || !code || !qty) return alert("Fill all fields");
+            
+            container.innerHTML = "";
+            for(let i=0; i<qty; i++) {
+                const div = document.createElement('div');
+                div.className = "p-4 border border-black text-center w-48";
+                const svg = document.createElement('svg');
+                div.appendChild(svg);
+                const p = document.createElement('p');
+                p.className = "text-[10px] font-bold mt-1";
+                p.innerText = name;
+                div.appendChild(p);
+                container.appendChild(div);
+                JsBarcode(svg, code, { format: "CODE128", width: 1.5, height: 40 });
+            }
+            window.print();
+        }
 
-// ===== MAIN ACTION =====
-function markBox(action){
+        // --- SCANNING ---
+        function setScanMode(mode) {
+            scanMode = mode;
+            document.getElementById('btnIn').className = mode === 'IN' ? 'flex-1 py-3 rounded-lg font-bold transition-all bg-white shadow-sm text-green-600' : 'flex-1 py-3 rounded-lg font-bold transition-all text-gray-400';
+            document.getElementById('btnOut').className = mode === 'OUT' ? 'flex-1 py-3 rounded-lg font-bold transition-all bg-white shadow-sm text-red-600' : 'flex-1 py-3 rounded-lg font-bold transition-all text-gray-400';
+        }
 
-const barcode=document.getElementById("barcode").value.trim();
+        function startScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, onScanSuccess);
+        }
 
-if(!isValidBarcode(barcode)){
-setStatus("Invalid barcode format. Use ITM-0000-0000-0000","error");
-return;
-}
+        function stopScanner() {
+            if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+        }
 
-const staff=getStaff();
-if(!staff) return;
+        async function onScanSuccess(decodedText) {
+            const now = Date.now();
+            if(now - lastScanTime < 2500) return;
+            lastScanTime = now;
 
-let message = `
-Confirm Transaction
+            document.getElementById('scanResult').innerHTML = `✅ SCANNED: <b>${decodedText}</b><br>Sending to Sheets...`;
+            
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'RECORD_SCAN', user: currentUser, type: scanMode, code: decodedText })
+                });
+                document.getElementById('scanResult').classList.add('bg-green-100', 'text-green-700');
+                fetchDashboardData();
+            } catch(e) { alert("Failed to save scan"); }
+        }
 
-Barcode: ${barcode}
-Action: ${action === "IN" ? "STOCK IN" : "STOCK OUT"}
-
-Do you want to proceed?
-`;
-
-if(!confirm(message)) return;
-
-fetch(WEB_APP_URL,{
-method:"POST",
-body:JSON.stringify({
-barcode:barcode,
-action:action,
-staff:staff
-})
-})
-.then(res=>res.json())
-.then(data=>{
-setStatus("Transaction recorded successfully","success");
-document.getElementById("barcode").value="";
-fetchBoxStatus();
-})
-.catch(()=>{
-setStatus("Upload failed","error");
-});
-
-}
-
-// ===== CAMERA SCAN =====
-function onScanSuccess(decodedText){
-document.getElementById("barcode").value=decodedText;
-}
-
-// START CAMERA
-const html5QrcodeScanner = new Html5QrcodeScanner(
-"reader",
-{fps:10,qrbox:200}
-);
-html5QrcodeScanner.render(onScanSuccess);
-
-// AUTO LOAD
-fetchBoxStatus();
-
-</script>
-
+        // Auto Refresh
+        setInterval(() => { if(!document.getElementById('loginOverlay').classList.contains('hidden')) return; fetchDashboardData(); }, 30000);
+    </script>
 </body>
 </html>
