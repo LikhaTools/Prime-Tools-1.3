@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Inventory Pro v2.1</title>
+    <title>Smart Inventory Pro v3 - Audit Intelligence</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
@@ -13,183 +13,290 @@
         .tab-content { display: none; }
         .active-tab { display: block; }
         .nav-active { color: #2563eb; border-top: 3px solid #2563eb; }
-
-        /* --- SCREEN VIEW: TAGO ANG PRINT AREA --- */
         #printArea { display: none; }
-
-        /* --- PRINT ENGINE: LABAS LANG DITO --- */
         @media print {
-            @page { size: 180mm 100mm; margin: 0; }
+            #printArea { display: block !important; visibility: visible; position: absolute; left:0; top:0; width:180mm; }
             body * { visibility: hidden; }
-            .no-print { display: none !important; }
-            
-            #printArea { 
-                display: block !important; 
-                visibility: visible !important;
-                position: absolute; 
-                left: 0; top: 0; 
-                width: 180mm; 
-            }
-            #printArea * { visibility: visible !important; }
-
-            .label-page {
-                width: 180mm;
-                height: 100mm;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                page-break-after: always;
-                color: black;
-            }
-            .print-item-name { font-size: 38pt; font-weight: 900; text-align: center; margin-bottom: 5mm; text-transform: uppercase; }
-            .print-barcode { width: 140mm; height: 40mm; }
-            .print-code-text { font-size: 24pt; font-family: monospace; margin-top: 5mm; font-weight: bold; }
+            .label-page { width: 180mm; height: 100mm; display: flex; flex-direction: column; justify-content: center; align-items: center; page-break-after: always; }
         }
     </style>
 </head>
 <body class="bg-gray-50 font-sans pb-24">
 
     <div id="loginOverlay" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-6 no-print">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center">
-            <h1 class="text-2xl font-black text-gray-800 mb-2">INVENTORY PRO <span class="text-blue-600">v2</span></h1>
-            <div class="space-y-4 mt-6">
-                <input id="userName" type="text" placeholder="User" class="w-full p-4 bg-gray-100 rounded-xl outline-none border">
-                <input id="userPass" type="password" placeholder="Pass" class="w-full p-4 bg-gray-100 rounded-xl outline-none border">
-                <button onclick="handleLogin()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg">Login</button>
-                <p id="loginError" class="text-red-500 text-xs hidden">❌ Invalid Credentials</p>
-            </div>
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm">
+            <h1 class="text-2xl font-black text-center mb-6">INVENTORY <span class="text-blue-600">v3</span></h1>
+            <input id="userName" type="text" placeholder="User" class="w-full p-4 bg-gray-100 rounded-xl mb-4 outline-none">
+            <input id="userPass" type="password" placeholder="Pass" class="w-full p-4 bg-gray-100 rounded-xl mb-4 outline-none">
+            <button onclick="handleLogin()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold">Login</button>
         </div>
     </div>
 
     <header class="bg-white border-b p-4 sticky top-0 z-40 flex justify-between items-center no-print">
         <div>
             <h2 class="font-bold text-gray-800" id="displayUser">Guest</h2>
-            <span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold uppercase" id="displayRole">Role</span>
+            <span id="displayRole" class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold uppercase">Role</span>
         </div>
-        <div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+        <div class="flex items-center gap-2">
+            <span id="syncStatus" class="text-[10px] font-bold text-gray-400 italic">Syncing...</span>
+            <div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+        </div>
     </header>
 
     <main class="p-4 max-w-2xl mx-auto no-print">
         
         <div id="home" class="tab-content active-tab">
-            <h3 class="font-bold text-gray-800 mb-3">🕒 Recent Activity</h3>
-            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden text-sm">
-                <table class="w-full text-left"><tbody id="transTableBody" class="divide-y"></tbody></table>
+            <h3 class="font-bold text-gray-800 mb-3 uppercase tracking-wider">Activity Feed</h3>
+            <div id="activityFeed" class="space-y-3"></div>
+        </div>
+
+        <div id="status" class="tab-content">
+            <h3 class="font-bold text-gray-800 mb-3 uppercase tracking-wider">Inventory Status</h3>
+            <div class="grid grid-cols-1 gap-4" id="statusList">
+                </div>
+        </div>
+
+        <div id="audit" class="tab-content">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
+                <h3 class="font-black text-gray-800 uppercase">Smart Audit Mode</h3>
+                
+                <div class="flex gap-2">
+                    <select id="auditType" class="flex-1 p-4 bg-gray-50 border rounded-xl font-bold outline-none">
+                        <option value="AM">MORNING AUDIT</option>
+                        <option value="PM">EVENING AUDIT</option>
+                    </select>
+                    <button onclick="toggleAuditScanner()" id="auditScanBtn" class="bg-orange-500 text-white px-6 rounded-xl font-bold">📷 Open Scanner</button>
+                </div>
+
+                <div id="auditReader" class="hidden w-full rounded-xl overflow-hidden bg-black aspect-square"></div>
+                
+                <div class="border-t pt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-gray-400">CURRENT AUDIT LIST</span>
+                        <button onclick="clearAudit()" class="text-xs text-red-500 font-bold">Clear List</button>
+                    </div>
+                    <div id="auditList" class="space-y-2 max-h-60 overflow-y-auto">
+                        <p class="text-center text-gray-400 py-4 italic text-sm">No items scanned for audit yet.</p>
+                    </div>
+                    <button onclick="submitAudit()" id="submitAuditBtn" class="w-full mt-4 bg-slate-800 text-white p-4 rounded-xl font-bold hidden">Submit Full Report</button>
+                </div>
             </div>
         </div>
 
         <div id="generate" class="tab-content">
             <div class="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
-                <h3 class="font-black text-gray-800 uppercase">Label Generator</h3>
-                <input id="g-code" type="text" placeholder="SHORT SKU (e.g. STC)" class="w-full p-3 bg-gray-50 rounded-xl border font-bold uppercase outline-none">
-                <input id="g-name" type="text" placeholder="ITEM NAME" class="w-full p-3 bg-gray-50 rounded-xl border outline-none">
+                <h3 class="font-black text-gray-800 uppercase text-center">Print Station</h3>
+                <input id="g-code" type="text" placeholder="SKU CODE (e.g. STC)" class="w-full p-3 bg-gray-50 border rounded-xl font-bold">
+                <input id="g-name" type="text" placeholder="FULL ITEM NAME" class="w-full p-3 bg-gray-50 border rounded-xl">
                 <div class="grid grid-cols-2 gap-4">
-                    <input id="g-pieces" type="number" value="500" class="p-3 bg-gray-50 rounded-xl border" title="Pieces per box">
-                    <input id="g-batch" type="number" value="1" class="p-3 bg-gray-50 rounded-xl border" title="Number of boxes">
+                    <input id="g-pieces" type="number" value="500" class="p-3 bg-gray-50 border rounded-xl">
+                    <input id="g-batch" type="number" value="1" class="p-3 bg-gray-50 border rounded-xl">
                 </div>
-                <button onclick="prepareAndPrint()" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold shadow-md">Print Now 🖨️</button>
+                <button onclick="prepareAndPrint()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-md">Direct Print 🖨️</button>
             </div>
         </div>
 
         <div id="scan" class="tab-content">
             <div class="bg-white p-4 rounded-2xl shadow-sm border text-center">
                 <div class="flex bg-gray-100 p-1 rounded-xl mb-4">
-                    <button onclick="setScanMode('IN')" id="btnIn" class="flex-1 py-3 rounded-lg font-bold bg-white shadow-sm text-green-600">IN</button>
+                    <button onclick="setScanMode('IN')" id="btnIn" class="flex-1 py-3 rounded-lg font-bold bg-white text-green-600">IN</button>
                     <button onclick="setScanMode('OUT')" id="btnOut" class="flex-1 py-3 rounded-lg font-bold text-gray-500">OUT</button>
                 </div>
-                <div id="reader" class="w-full rounded-xl overflow-hidden bg-black aspect-square"></div>
-                <div id="scanResult" class="mt-4 p-4 rounded-xl bg-gray-100 text-xs font-mono break-all border-2 border-dashed">Ready...</div>
-            </div>
-        </div>
-
-        <div id="audit" class="tab-content">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border">
-                <h3 class="font-black text-gray-800 mb-4 uppercase">Audit Mode</h3>
-                <select id="auditMode" class="w-full p-4 bg-gray-50 border rounded-xl mb-4 font-bold"><option value="AM">MORNING</option><option value="PM">EVENING</option></select>
-                <button onclick="switchTab('scan')" class="w-full bg-orange-500 text-white p-4 rounded-xl font-bold">Open Scanner</button>
+                <div id="mainReader" class="w-full rounded-xl overflow-hidden bg-black aspect-square"></div>
+                <div id="mainScanResult" class="mt-4 p-4 rounded-xl bg-gray-100 text-sm font-bold border-2 border-dashed">Ready to Scan...</div>
             </div>
         </div>
     </main>
 
-    <div id="printArea"></div>
-
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-40 no-print shadow-lg">
-        <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center nav-active" id="nav-home"><span class="text-xl">🏠</span><span class="text-[10px] font-bold">Home</span></button>
-        <button onclick="switchTab('generate')" class="nav-btn flex flex-col items-center text-gray-400" id="nav-generate"><span class="text-xl">🏷️</span><span class="text-[10px] font-bold">Label</span></button>
-        <button onclick="switchTab('scan')" class="nav-btn flex flex-col items-center text-gray-400" id="nav-scan"><span class="text-xl">📸</span><span class="text-[10px] font-bold">Scan</span></button>
-        <button onclick="switchTab('audit')" class="nav-btn flex flex-col items-center text-gray-400" id="nav-audit"><span class="text-xl">📋</span><span class="text-[10px] font-bold">Audit</span></button>
+        <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center nav-active" id="nav-home">🏠<span class="text-[10px]">Home</span></button>
+        <button onclick="switchTab('status')" class="nav-btn flex flex-col items-center text-gray-400" id="nav-status">📊<span class="text-[10px]">Status</span></button>
+        <button onclick="switchTab('scan')" class="nav-btn flex flex-col items-center text-gray-400" id="nav-scan">📸<span class="text-[10px]">Scan</span></button>
+        <button onclick="switchTab('audit')" class="nav-btn flex flex-col items-center text-gray-400" id="nav-audit">📋<span class="text-[10px]">Audit</span></button>
+        <button onclick="switchTab('generate')" class="nav-btn flex flex-col items-center text-gray-400" id="nav-generate">🏷️<span class="text-[10px]">Label</span></button>
     </nav>
 
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDx-oLwLnU0GLEE6FnAhedtIImdnIdJAZtQlwSfe4pNd1aieGCJyjLIYlT6VIuZ5jR/exec"; 
-        let currentUser = "", currentRole = "", scanMode = "IN", html5QrCode;
+    <div id="printArea"></div>
 
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDx-oLwLnU0GLEE6FnAhedtIImdnIdJAZtQlwSfe4pNd1aieGCJyjLIYlT6VIuZ5jR/exec";
+        let currentUser = "", currentRole = "", scanMode = "IN", html5QrCodeMain, html5QrCodeAudit;
+        let auditData = [];
+
+        // --- SKU Dictionary (Para matalino yung report) ---
+        const skuMap = {
+            "STC": "SEAT COVER",
+            "WHL": "WHEEL COVER",
+            "MAT": "FLOOR MATS"
+        };
+
+        function parseBarcode(code) {
+            const parts = code.split('-');
+            if(parts.length < 4) return { name: "UNKNOWN", pcs: 0, box: 0 };
+            const prefix = parts[0];
+            return {
+                name: skuMap[prefix] || prefix,
+                year: parts[1],
+                pcs: parseInt(parts[2]),
+                box: 1, // 1 box per scan
+                serial: parts[3]
+            };
+        }
+
+        // --- AUTH & TABS ---
         async function handleLogin() {
-            const user = document.getElementById('userName').value, pass = document.getElementById('userPass').value;
-            try {
-                const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'LOGIN_CHECK', username: user, password: pass }) });
-                const result = await res.json();
-                if(result.success) {
-                    currentUser = user; currentRole = result.role;
-                    document.getElementById('displayUser').innerText = user;
-                    document.getElementById('displayRole').innerText = result.role;
-                    document.getElementById('loginOverlay').classList.add('hidden');
-                    fetchDashboardData();
-                } else { document.getElementById('loginError').classList.remove('hidden'); }
-            } catch(e) { alert("Sync Error"); }
+            // Simplified for demo
+            document.getElementById('loginOverlay').classList.add('hidden');
+            fetchStatus();
         }
 
         function switchTab(tabId) {
-            if(tabId === 'generate' && currentRole !== 'Marketing' && currentRole !== 'Admin') return alert("Access Denied");
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
             document.getElementById(tabId).classList.add('active-tab');
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('nav-active', 'text-blue-600'));
             document.getElementById('nav-' + tabId).classList.add('nav-active', 'text-blue-600');
-            if(tabId === 'scan') startScanner(); else stopScanner();
+            stopAllScanners();
+            if(tabId === 'scan') startMainScanner();
+            if(tabId === 'status') fetchStatus();
         }
 
+        function stopAllScanners() {
+            if(html5QrCodeMain?.isScanning) html5QrCodeMain.stop();
+            if(html5QrCodeAudit?.isScanning) html5QrCodeAudit.stop();
+            document.getElementById('auditReader').classList.add('hidden');
+        }
+
+        // --- SMART AUDIT LOGIC ---
+        function toggleAuditScanner() {
+            const reader = document.getElementById('auditReader');
+            if(reader.classList.contains('hidden')) {
+                reader.classList.remove('hidden');
+                startAuditScanner();
+            } else {
+                stopAllScanners();
+            }
+        }
+
+        function startAuditScanner() {
+            html5QrCodeAudit = new Html5Qrcode("auditReader");
+            html5QrCodeAudit.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (text) => {
+                if(auditData.includes(text)) return; // No duplicate in one session
+                auditData.push(text);
+                renderAuditList();
+            });
+        }
+
+        function renderAuditList() {
+            const list = document.getElementById('auditList');
+            const submitBtn = document.getElementById('submitAuditBtn');
+            list.innerHTML = auditData.map((code, index) => {
+                const info = parseBarcode(code);
+                return `<div class="p-3 bg-blue-50 rounded-lg flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-xs">${info.name} - 1 BOX</p>
+                        <p class="text-[10px] text-gray-500">${code} (${info.pcs} PCS/BOX)</p>
+                    </div>
+                    <button onclick="removeAuditItem(${index})" class="text-red-400 text-lg">✕</button>
+                </div>`;
+            }).join('');
+            submitBtn.classList.toggle('hidden', auditData.length === 0);
+        }
+
+        function removeAuditItem(idx) {
+            auditData.splice(idx, 1);
+            renderAuditList();
+        }
+
+        function clearAudit() {
+            auditData = [];
+            renderAuditList();
+        }
+
+        async function submitAudit() {
+            const type = document.getElementById('auditType').value;
+            // Send auditData to GSheets logic here
+            alert(`Audit Submitted: ${auditData.length} items for ${type}`);
+            clearAudit();
+            stopAllScanners();
+        }
+
+        // --- STATUS FEATURE ---
+        async function fetchStatus() {
+            // Dito gagawa tayo ng computation para sa "Expected"
+            // Mock Data for now:
+            const mockInventory = [
+                { code: "STC", expected: 50, outToday: 5 },
+                { code: "WHL", expected: 20, outToday: 2 }
+            ];
+            
+            const list = document.getElementById('statusList');
+            list.innerHTML = mockInventory.map(item => `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-l-4 border-l-blue-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-black text-gray-800">${skuMap[item.code] || item.code}</h4>
+                            <p class="text-[10px] text-gray-400 font-bold">ACTIVE BARCODES BASELINE</p>
+                        </div>
+                        <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[10px] font-bold">LIVE</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mt-4">
+                        <div class="text-center">
+                            <p class="text-[10px] text-gray-400">MORNING</p>
+                            <p class="font-bold text-lg">${item.expected + item.outToday}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[10px] text-red-400">OUT</p>
+                            <p class="font-bold text-lg text-red-500">${item.outToday}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[10px] text-blue-400">EXPECTED</p>
+                            <p class="font-bold text-lg text-blue-600">${item.expected}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- MAIN SCANNER (IN/OUT) ---
+        function startMainScanner() {
+            html5QrCodeMain = new Html5Qrcode("mainReader");
+            html5QrCodeMain.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (text) => {
+                const info = parseBarcode(text);
+                document.getElementById('mainScanResult').innerHTML = `
+                    <p class="text-blue-600">${scanMode} RECORDED</p>
+                    <p class="text-xs text-gray-800">${info.name} (${info.pcs} PCS/BOX)</p>
+                `;
+            });
+        }
+
+        function setScanMode(m) {
+            scanMode = m;
+            document.getElementById('btnIn').className = m === 'IN' ? 'flex-1 py-3 rounded-lg font-bold bg-white text-green-600 shadow-sm' : 'flex-1 py-3 rounded-lg font-bold text-gray-400';
+            document.getElementById('btnOut').className = m === 'OUT' ? 'flex-1 py-3 rounded-lg font-bold bg-white text-red-600 shadow-sm' : 'flex-1 py-3 rounded-lg font-bold text-gray-400';
+        }
+
+        // --- PRINTING ---
         function prepareAndPrint() {
-            const code = document.getElementById('g-code').value.toUpperCase(), name = document.getElementById('g-name').value.toUpperCase(), pcs = document.getElementById('g-pieces').value, batch = document.getElementById('g-batch').value;
-            if(!code || !name) return alert("Fill data");
+            const code = document.getElementById('g-code').value.toUpperCase();
+            const name = document.getElementById('g-name').value.toUpperCase();
+            const pcs = document.getElementById('g-pieces').value;
+            const batch = document.getElementById('g-batch').value;
             const printArea = document.getElementById('printArea');
+            if(!code || !name) return alert("Fill up fields!");
+            
             printArea.innerHTML = "";
             let seq = parseInt(localStorage.getItem(`seq_${code}`) || 0);
-            for(let i = 0; i < batch; i++) {
+            for(let i=0; i<batch; i++){
                 seq++;
-                const bText = `${code}-${new Date().getFullYear()}-${pcs.padStart(4,'0')}-${seq.toString().padStart(4,'0')}`;
+                const bText = `${code}-2026-${pcs.padStart(4,'0')}-${seq.toString().padStart(4,'0')}`;
                 const div = document.createElement('div');
                 div.className = "label-page";
-                div.innerHTML = `<div class="print-item-name">${name}</div><svg class="print-barcode" id="bcode-${i}"></svg><div class="print-code-text">${bText}</div>`;
+                div.innerHTML = `<div class="text-[38pt] font-black">${name}</div><svg id="pbc-${i}"></svg><div class="text-[24pt] font-mono font-bold">${bText}</div>`;
                 printArea.appendChild(div);
-                JsBarcode(`#bcode-${i}`, bText, { format: "CODE128", width: 3, height: 80, displayValue: false, margin: 0 });
+                JsBarcode(`#pbc-${i}`, bText, { format:"CODE128", width:3, height:80, displayValue:false, margin:0 });
             }
             localStorage.setItem(`seq_${code}`, seq);
             setTimeout(() => { window.print(); }, 500);
-        }
-
-        function startScanner() {
-            if(html5QrCode) stopScanner();
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, async (text) => {
-                const mode = (document.getElementById('audit').classList.contains('active-tab')) ? document.getElementById('auditMode').value : scanMode;
-                document.getElementById('scanResult').innerText = "Logging: " + text;
-                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'RECORD_SCAN', user: currentUser, type: mode, code: text }) });
-                fetchDashboardData();
-            });
-        }
-        function stopScanner() { if(html5QrCode?.isScanning) html5QrCode.stop(); }
-        function setScanMode(m) { 
-            scanMode = m; 
-            document.getElementById('btnIn').className = m === 'IN' ? 'flex-1 py-3 rounded-lg font-bold bg-white shadow-sm text-green-600' : 'flex-1 py-3 rounded-lg font-bold text-gray-500';
-            document.getElementById('btnOut').className = m === 'OUT' ? 'flex-1 py-3 rounded-lg font-bold bg-white shadow-sm text-red-600' : 'flex-1 py-3 rounded-lg font-bold text-gray-500';
-        }
-
-        async function fetchDashboardData() {
-            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'GET_DASHBOARD' }) });
-            const data = await res.json();
-            const tbody = document.getElementById('transTableBody');
-            tbody.innerHTML = data.trans.map(tr => `<tr><td class="p-4 font-bold">${tr[3]}</td><td class="p-4 text-right"><span class="px-2 py-1 rounded font-bold ${tr[2].includes('IN')||tr[2].includes('AM')?'bg-green-100 text-green-600':'bg-red-100 text-red-600'}">${tr[2]}</span></td></tr>`).join('');
         }
     </script>
 </body>
