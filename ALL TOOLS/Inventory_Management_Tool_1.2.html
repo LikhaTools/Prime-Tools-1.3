@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Inventory Mega (Pro) - Final</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+body{
+  font-family:'Inter',sans-serif;
+  margin:0;
+  background:#f5f5f5;
+  color:#111;
+  overflow:hidden;
+}
+
+.container{
+  display:flex;
+  height:100vh;
+  position:relative;
+  margin-left:25px;
+}
+
+.topTitle{
+  position:fixed;
+  top:12px;
+  left:45px;
+  font-size:18px;
+  font-weight:700;
+  color:#4f46e5;
+  z-index:1000;
+  letter-spacing:0.5px;
+}
+
+.left{
+  width:27%;
+  background:#fff;
+  padding:60px 12px 16px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  font-size:13px;
+  overflow-y:auto;
+  box-sizing:border-box;
+}
+
+.left h3{ margin:0 0 10px 0; font-size:16px; }
+
+.inputLabel{
+  font-weight:600;
+  margin:6px 0 2px 0;
+  font-size:11px;
+  color:#4f46e5;
+  text-transform: uppercase;
+}
+
+textarea{
+  width:100%;
+  padding:8px;
+  border-radius:6px;
+  border:1px solid #ddd;
+  background:#fafafa;
+  color:#111;
+  resize:none;
+  font-size:12px;
+  box-sizing:border-box;
+  height:70px;
+  margin-bottom:4px;
+}
+
+.leftButtons{
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.left button{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  background:#fff;
+  color:#111;
+  font-weight:600;
+  cursor:pointer;
+  border:1px solid #000;
+  transition: all 0.2s ease;
+}
+
+.left button:hover{
+  background:#000;
+  color:#fff;
+  transform:translateY(-2px);
+}
+
+.right{
+  flex:1;
+  position:relative;
+  overflow:auto;
+  padding:20px;
+  font-size:13px;
+}
+
+.empty{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  color:#888;
+  font-weight:600;
+}
+
+@keyframes fadeInOut{ 0%,100%{opacity:0.3;} 50%{opacity:1;} }
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-bottom:25px;
+  background:#fff;
+  border-radius:10px;
+  overflow:hidden;
+  table-layout:fixed;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+th,td{
+  border:1px solid #eee;
+  padding:8px;
+  text-align:center;
+}
+
+th{ background:#f8f9fa; font-weight:600; color: #444; }
+
+td.numVal{ font-weight:600; font-size:14px; color:#111; }
+
+th:nth-child(1), td:nth-child(1){ width:35%; text-align:left; padding-left:15px; }
+
+tr.restock td{ background:#fff1f1 !important; color: #d00; }
+
+.classHeader{
+  background:#4f46e5;
+  color:#fff;
+  font-weight:600;
+  padding:10px 15px;
+  font-size:14px;
+  border-radius:8px 8px 0 0;
+}
+
+.feed{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+  gap:15px;
+  margin-top:20px;
+}
+
+.itemBox{
+  background:#fff;
+  padding:15px;
+  border-radius:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08);
+  display:flex;
+  flex-direction:column;
+  transition: 0.3s;
+}
+
+.itemBox:hover{ transform:scale(1.02); }
+
+.title{font-size:14px; font-weight:600; margin-bottom:5px;}
+.sub{font-size:11px; color:#666;}
+.valGrid{ display:grid; grid-template-columns: repeat(5, 1fr); margin-top:10px; text-align:center;}
+.bigNum{ font-size:18px; font-weight:700; }
+
+#searchBox {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+</style>
+</head>
+<body>
+<div class="topTitle">Inventory Mega (Pro)</div>
+
+<div class="container">
+  <div class="left">
+    <h3>📥 INPUT DATA</h3>
+    
+    <div class="inputLabel">Hold / Within 10d</div>
+    <textarea id="hold" placeholder="Item Name	Hold Qty	Within 10d"></textarea>
+
+    <div class="inputLabel">Shipped Stock</div>
+    <textarea id="shipped" placeholder="Item Name	Qty"></textarea>
+
+    <div class="inputLabel">RTS (Return to Sender)</div>
+    <textarea id="rts" placeholder="Item Name	RTS Qty"></textarea>
+
+    <div class="inputLabel">Supplier In</div>
+    <textarea id="supplier" placeholder="Item Name - Qty"></textarea>
+
+    <div class="leftButtons">
+      <button onclick="runAll()" id="btnCompute">🚀 Compute</button>
+      <button onclick="copyTableAsImage()">📋 Copy as Image</button>
+      <button onclick="uploadFull()">📤 Full Upload to GSheet</button>
+    </div>
+  </div>
+
+  <div class="right">
+    <input type="text" id="searchBox" placeholder="Search item name..." oninput="render()">
+    <div id="empty" class="empty"><span>📊 Waiting for data...</span></div>
+    <div id="output"></div>
+    <div id="feed" class="feed"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxRfV4yAlBkk5x90fNpml_g5vF80kShQSN2uqvz9761wobdLv-w3EeoZAh57THt3POA8A/exec";
+
+let classMap = {};
+let itemMapping = {};
+let finalData = [];
+
+function pcs(name){ const m=name.match(/^(\d+)\s*x/i); return m?Number(m[1]):1; }
+function clean(name){ return name.replace(/^\d+\s*x\s*/i,'').trim().toUpperCase(); }
+function num(v){ return Number(String(v||0).replace(/,/g,'')) || 0; }
+function round100(n){ return n<=0 ? 0 : Math.ceil(n/100)*100; }
+
+function mapItemName(rawName) {
+    const cleaned = clean(rawName);
+    return itemMapping[cleaned] || cleaned;
+}
+
+async function runAll() {
+    const btn = document.getElementById('btnCompute');
+    const empty = document.getElementById('empty');
+    btn.disabled = true;
+    empty.innerHTML = `<span style="animation:fadeInOut 1s infinite">🔄 Fetching Class & Mapping...</span>`;
+
+    try {
+        const response = await fetch(WEBAPP_URL);
+        const data = await response.json();
+        
+        classMap = {};
+        data.classMap.forEach(r => {
+            classMap[r.name.toUpperCase()] = { class: r.class, stock: num(r.stock) };
+        });
+        itemMapping = data.itemMapping || {};
+
+        compute();
+    } catch (e) {
+        alert("Fetch Error: " + e.message);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function parseInput(id) {
+    const text = document.getElementById(id).value.trim();
+    const map = {};
+    if(!text) return map;
+
+    text.split('\n').forEach(line => {
+        if (!line.trim()) return;
+
+        let rawName = "", name = "", v1 = 0, v2 = 0;
+        let rawV1 = 0, rawV2 = 0;
+
+        if (id === 'supplier') {
+            const p = line.split('-');
+            if(p.length < 2) return;
+            rawName = p.slice(0,-1).join('-').trim();
+            v1 = num(p[p.length-1]);
+            name = mapItemName(rawName);
+            if(!classMap[name]) return; // skip if item not in classMap
+            const multiplier = pcs(rawName);
+            rawV1 = v1;
+            v1 = v1 * multiplier;
+            if(!map[name]) map[name] = { val1:0, val2:0, raw1:0, raw2:0 };
+            map[name].val1 += v1;
+            map[name].val2 += 0;
+            map[name].raw1 += rawV1;
+            map[name].raw2 += 0;
+        } else {
+            const cols = line.split('\t');
+            if(cols.length < 2 || /Item|Total/i.test(cols[0])) return;
+            rawName = cols[0];
+            const multiplier = pcs(rawName);
+            let hold = num(cols[1]);
+            let within = num(cols[2] || 0);
+            
+            rawV1 = hold;
+            rawV2 = within;
+            
+            v1 = hold * multiplier;
+            v2 = within * multiplier;
+            name = mapItemName(rawName);
+
+            if(!map[name]) map[name] = { val1:0, val2:0, raw1:0, raw2:0 };
+            map[name].val1 += v1;
+            map[name].val2 += v2;
+            map[name].raw1 += rawV1;
+            map[name].raw2 += rawV2;
+        }
+    });
+
+    return map;
+}
+
+function compute() {
+    const hMap = parseInput('hold');
+    const sMap = parseInput('shipped');
+    const rMap = parseInput('rts');
+    const supMap = parseInput('supplier');
+
+    const allNames = new Set([
+        ...Object.keys(classMap),
+        ...Object.keys(hMap),
+        ...Object.keys(sMap),
+        ...Object.keys(rMap),
+        ...Object.keys(supMap)
+    ]);
+
+    finalData = [];
+
+    allNames.forEach(name => {
+        const clsInfo = classMap[name] || { class: 'F', stock: 0 };
+
+        const holdQty = hMap[name]?.val1 || 0;
+        const within10 = hMap[name]?.val2 || 0;
+        const rawHoldQty = hMap[name]?.raw1 || 0;
+        const rawWithin10 = hMap[name]?.raw2 || 0;
+
+        const shippedQty = sMap[name]?.val1 || 0;
+        const rtsQty = rMap[name]?.val1 || 0;
+        const supplierQty = supMap[name]?.val1 || 0;
+
+        let safeStock = Math.max(clsInfo.stock + supplierQty + rtsQty - shippedQty, 0);
+        const avgOrder = within10 > 0 ? (within10 / 10) : 0;
+        const rawAvgOrder = rawWithin10 > 0 ? (rawWithin10 / 10) : 0;
+
+        let restock = 0;
+        let remaining = 0;
+        const cls = clsInfo.class;
+
+        if (cls === 'A') {
+            restock = round100(Math.max(holdQty + (avgOrder * 10) - safeStock, 0));
+        } else if (cls === 'B') {
+            restock = round100(Math.max(holdQty + (avgOrder * 5) - safeStock, 0));
+        } else if (cls === 'C') {
+            restock = round100(Math.max(holdQty + (avgOrder * 3) - safeStock, 0));
+        } else if (cls === 'D' || cls === 'F') {
+            restock = Math.max(holdQty - safeStock, 0);
+        } else if (cls === 'E') {
+            restock = 0;
+        }
+
+        remaining = avgOrder > 0 ? Math.floor(safeStock / avgOrder) : 0;
+
+        finalData.push({
+            item: name,
+            cls: cls,
+            stock: safeStock,
+            hold: holdQty,
+            avg: avgOrder,
+            rawHold: rawHoldQty,
+            rawAvg: rawAvgOrder,
+            days: remaining,
+            restock: restock
+        });
+    });
+
+    render();
+}
+
+// Render function (table + feed)
+function render() {
+    const search = document.getElementById('searchBox').value.toUpperCase();
+    const output = document.getElementById('output');
+    const feed = document.getElementById('feed');
+    const empty = document.getElementById('empty');
+
+    const filtered = finalData.filter(r => 
+        r.item.includes(search) && (r.stock > 0 || r.hold > 0 || r.restock > 0 || r.avg > 0)
+    );
+
+    if (filtered.length === 0) {
+        empty.style.display = "block";
+        output.innerHTML = "";
+        feed.innerHTML = "";
+        return;
+    }
+    empty.style.display = "none";
+
+    const groups = { A: [], B: [], C: [], D: [], E: [], F: [] };
+    filtered.forEach(r => groups[r.cls]?.push(r));
+
+    let tableHtml = "";
+    let feedHtml = "";
+
+    const titles = {
+        A: "Class A (10 Days)",
+        B: "Class B (5 Days)",
+        C: "Class C (3 Days)",
+        D: "Class D (New Item)",
+        E: "Class E (Clearance)",
+        F: "Class F (For Hold)"
+    };
+
+    Object.keys(groups).forEach(key => {
+        groups[key].sort((a, b) => b.restock - a.restock || b.stock - a.stock);
+        
+        if (groups[key].length > 0) {
+            tableHtml += `<div class="classHeader">${titles[key]}</div>`;
+            tableHtml += `<table><tr><th>Item</th><th>Stock</th><th>Hold</th><th>Remaining</th><th>Avg</th><th>Restock</th></tr>`;
+            groups[key].forEach(r => {
+                const displayHold = Math.round(r.rawHold);
+                const displayAvg = Math.round(r.rawAvg);
+                const isRed = r.restock > 0 ? "restock" : "";
+                tableHtml += `<tr class="${isRed}">
+                    <td>${r.item}</td>
+                    <td class="numVal" data-val="${r.stock}">0</td>
+                    <td class="numVal" data-val="${displayHold}">0</td>
+                    <td class="numVal" data-val="${r.days}">0</td>
+                    <td class="numVal" data-val="${displayAvg}">0</td>
+                    <td class="numVal" data-val="${r.restock}">0</td>
+                </tr>`;
+                feedHtml += `<div class="itemBox" style="${r.restock > 0 ? 'border-left:5px solid #d00;background:#fffafa;' : ''}">
+                    <div class="sub">CLASS ${r.cls}</div>
+                    <div class="title">${r.item}</div>
+                    <div class="valGrid">
+                        <div><div class="bigNum">${r.stock}</div><div class="sub">Stock</div></div>
+                        <div><div class="bigNum">${r.days}</div><div class="sub">Days</div></div>
+                        <div><div class="bigNum" style="color:${r.restock>0?'#d00':'#111'}">${r.restock}</div><div class="sub">Restock</div></div>
+                        <div><div class="bigNum">${displayHold}</div><div class="sub">Hold</div></div>
+                        <div><div class="bigNum">${displayAvg}</div><div class="sub">Avg</div></div>
+                    </div>
+                </div>`;
+            });
+            tableHtml += `</table>`;
+        }
+    });
+
+    output.innerHTML = tableHtml;
+    feed.innerHTML = feedHtml;
+    animateNumbers();
+}
+
+function animateNumbers() {
+    const nums = document.querySelectorAll('.numVal');
+    nums.forEach(el => {
+        let endVal = Number(el.getAttribute('data-val')) || 0;
+        if (endVal === 0) { el.textContent = "0"; return; }
+        let start = 0;
+        const step = () => {
+            start += Math.ceil(endVal / 20);
+            if (start >= endVal) start = endVal;
+            el.textContent = start;
+            if (start < endVal) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    });
+}
+
+function copyTableAsImage() {
+    html2canvas(document.getElementById('output')).then(canvas => {
+        canvas.toBlob(blob => {
+            const item = new ClipboardItem({ "image/png": blob });
+            navigator.clipboard.write([item]).then(() => alert("Copied to clipboard!"));
+        });
+    });
+}
+
+function uploadFull() {
+    if (finalData.length === 0) return alert("No data to upload!");
+    const btn = document.querySelector('button[onclick="uploadFull()"]');
+    btn.innerText = "⏳ Uploading...";
+    btn.disabled = true;
+
+    const payload = {
+        FULL_UPLOAD: finalData.map(r => ({
+            item: (r.item||"").toString().trim().toUpperCase(),
+            class: r.cls,
+            stock: Number(r.stock||0),
+            hold: Number(r.hold||0),
+            avg: Number(r.avg||0),
+            restock: Number(r.restock||0),
+            remaining: Number(r.days||0)
+        })),
+        HOLD_UPLOAD: document.getElementById('hold').value
+            .split('\n')
+            .map(line => {
+                const parts = line.split('\t');
+                if(parts.length < 2) return null;
+                return { item: (parts[0]||"").toString().trim().toUpperCase(), qty: Number(parts[1]||0) };
+            })
+            .filter(r => r && r.item && r.qty > 0)
+    };
+
+    fetch(WEBAPP_URL, {
+        method:"POST",
+        mode:"no-cors",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload)
+    }).then(() => {
+        alert("✅ Upload Successful!");
+        btn.innerText = "📤 Full Upload to GSheet";
+        btn.disabled = false;
+    }).catch(err=>{
+        alert("Upload Error: "+err);
+        btn.disabled=false;
+    });
+}
+</script>
+</body>
+</html>
