@@ -417,7 +417,12 @@ function render() {
     };
 
     Object.keys(groups).forEach(key => {
-        groups[key].forEach(r => {
+        groups[key].sort((a, b) => b.restock - a.restock || b.stock - a.stock);
+        
+        if (groups[key].length > 0) {
+            tableHtml += `<div class="classHeader">${titles[key]}</div>`;
+            tableHtml += `<table><tr><th>Item</th><th>Stock</th><th>Hold</th><th>Remaining</th><th>Avg</th><th>Restock</th></tr>`;
+            groups[key].forEach(r => {
     const displayHold = Math.round(r.rawHold);
     const displayAvg = Math.round(r.rawAvg);
     
