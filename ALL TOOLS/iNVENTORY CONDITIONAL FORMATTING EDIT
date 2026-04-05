@@ -136,14 +136,10 @@ td.numVal{ font-weight:600; font-size:14px; color:#111; }
 
 th:nth-child(1), td:nth-child(1){ width:35%; text-align:left; padding-left:15px; }
 
-/* Table Row Colors */
-tr.yellow td   { background: #fef9c3 !important; color: #854d0e; } /* 16-20 days */
-tr.orange td   { background: #ffedd5 !important; color: #9a3412; } /* 11-15 days */
-tr.red td      { background: #fee2e2 !important; color: #b91c1c; } /* 10 days */
-tr.darkred td  { background: #7f1d1d !important; color: #ffffff; } /* 0-5 days */
-
-/* Default Restock (Optional: para hindi mag-conflict) */
-tr.restock td  { background: #fee2e2 !important; color: #b91c1c; }
+tr.critical td { background: #7f1d1d !important; color: #ffffff; } /* Dark Red */
+tr.danger td   { background: #fee2e2 !important; color: #b91c1c; } /* Red */
+tr.warning td  { background: #ffedd5 !important; color: #9a3412; } /* Orange */
+tr.notice td   { background: #fef9c3 !important; color: #854d0e; } /* Yellow */
 
 .classHeader{
   background:#4f46e5;
@@ -408,73 +404,76 @@ function render() {
     let feedHtml = "";
 
     const titles = {
-        A: "Class A (10 Days)",
-        B: "Class B (5 Days)",
-        C: "Class C (3 Days)",
+        A: "Class A (10 Days Buffer)",
+        B: "Class B (5 Days Buffer)",
+        C: "Class C (3 Days Buffer)",
         D: "Class D (New Item)",
         E: "Class E (Clearance)",
         F: "Class F (For Hold)"
     };
 
     Object.keys(groups).forEach(key => {
-        groups[key].sort((a, b) => b.restock - a.restock || b.stock - a.stock);
+        groups[key].sort((a, b) => b.restock - a.restock || b.days - a.days);
         
         if (groups[key].length > 0) {
             tableHtml += `<div class="classHeader">${titles[key]}</div>`;
             tableHtml += `<table><tr><th>Item</th><th>Stock</th><th>Hold</th><th>Remaining</th><th>Avg</th><th>Restock</th></tr>`;
+            
             groups[key].forEach(r => {
-    const displayHold = Math.round(r.rawHold);
-    const displayAvg = Math.round(r.rawAvg);
-    
-    let rowClass = "";
-    let borderCol = "transparent";
-    let bgCol = "#fff";
-    let textCol = "#111";
+                const displayHold = Math.round(r.rawHold);
+                const displayAvg = Math.round(r.rawAvg);
+                
+                // 1. SET TARGET DAYS PER CLASS
+                let targetDays = 0;
+                if (key === 'A') targetDays = 10;
+                else if (key === 'B') targetDays = 5;
+                else if (key === 'C') targetDays = 3;
+                else targetDays = 1;
 
-    // COLOR LOGIC BASE SA DAYS REMAINING
-    if (r.days <= 5) {
-        rowClass = "darkred";
-        borderCol = "#450a0a"; 
-        bgCol = "#7f1d1d";
-        textCol = "#fff";
-    } else if (r.days <= 10) {
-        rowClass = "red";
-        borderCol = "#b91c1c";
-        bgCol = "#fee2e2";
-    } else if (r.days <= 15) {
-        rowClass = "orange";
-        borderCol = "#9a3412";
-        bgCol = "#ffedd5";
-    } else if (r.days <= 20) {
-        rowClass = "yellow";
-        borderCol = "#854d0e";
-        bgCol = "#fef9c3";
-    }
+                // 2. COLOR LOGIC
+                let rowClass = "";
+                let borderCol = "#ddd"; 
+                let bgCol = "#fff";
+                let textCol = "#111";
 
-    // TABLE HTML
-    tableHtml += `<tr class="${rowClass}">
-        <td>${r.item}</td>
-        <td class="numVal" data-val="${r.stock}">0</td>
-        <td class="numVal" data-val="${displayHold}">0</td>
-        <td class="numVal" data-val="${r.days}">0</td>
-        <td class="numVal" data-val="${displayAvg}">0</td>
-        <td class="numVal" data-val="${r.restock}">0</td>
-    </tr>`;
+                if (r.days <= 0 && r.avg > 0) {
+                    rowClass = "critical"; // Dark Red
+                    borderCol = "#450a0a"; bgCol = "#7f1d1d"; textCol = "#fff";
+                } else if (r.days <= (targetDays * 0.5)) {
+                    rowClass = "danger"; // Red
+                    borderCol = "#b91c1c"; bgCol = "#fee2e2";
+                } else if (r.days <= targetDays) {
+                    rowClass = "warning"; // Orange
+                    borderCol = "#9a3412"; bgCol = "#ffedd5";
+                } else if (r.days <= (targetDays * 2)) {
+                    rowClass = "notice"; // Yellow
+                    borderCol = "#854d0e"; bgCol = "#fef9c3";
+                }
 
-    // FEED CARD HTML
-    feedHtml += `
-    <div class="itemBox" style="border-left:5px solid ${borderCol}; background:${bgCol}; color:${textCol}">
-        <div class="sub" style="color:${r.days <= 5 ? '#ccc' : '#666'}">CLASS ${r.cls}</div>
-        <div class="title">${r.item}</div>
-        <div class="valGrid">
-            <div><div class="bigNum">${r.stock}</div><div class="sub">Stock</div></div>
-            <div><div class="bigNum">${r.days}</div><div class="sub">Days</div></div>
-            <div><div class="bigNum">${r.restock}</div><div class="sub">Restock</div></div>
-            <div><div class="bigNum">${displayHold}</div><div class="sub">Hold</div></div>
-            <div><div class="bigNum">${displayAvg}</div><div class="sub">Avg</div></div>
-        </div>
-    </div>`;
-});
+                // TABLE ROW
+                tableHtml += `<tr class="${rowClass}">
+                    <td>${r.item}</td>
+                    <td class="numVal" data-val="${r.stock}">0</td>
+                    <td class="numVal" data-val="${displayHold}">0</td>
+                    <td class="numVal" data-val="${r.days}">0</td>
+                    <td class="numVal" data-val="${displayAvg}">0</td>
+                    <td class="numVal" data-val="${r.restock}">0</td>
+                </tr>`;
+
+                // FEED CARD
+                feedHtml += `
+                <div class="itemBox" style="border-left:5px solid ${borderCol}; background:${bgCol}; color:${textCol}">
+                    <div class="sub" style="color:${textCol === '#fff' ? '#ccc' : '#666'}">CLASS ${r.cls}</div>
+                    <div class="title">${r.item}</div>
+                    <div class="valGrid">
+                        <div><div class="bigNum">${r.stock}</div><div class="sub">Stock</div></div>
+                        <div><div class="bigNum">${r.days}</div><div class="sub">Days</div></div>
+                        <div><div class="bigNum">${r.restock}</div><div class="sub">Restock</div></div>
+                        <div><div class="bigNum">${displayHold}</div><div class="sub">Hold</div></div>
+                        <div><div class="bigNum">${displayAvg}</div><div class="sub">Avg</div></div>
+                    </div>
+                </div>`;
+            });
             tableHtml += `</table>`;
         }
     });
