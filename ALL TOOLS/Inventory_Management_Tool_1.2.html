@@ -136,7 +136,14 @@ td.numVal{ font-weight:600; font-size:14px; color:#111; }
 
 th:nth-child(1), td:nth-child(1){ width:35%; text-align:left; padding-left:15px; }
 
-tr.restock td{ background:#fff1f1 !important; color: #d00; }
+/* Table Row Colors */
+tr.yellow td   { background: #fef9c3 !important; color: #854d0e; } /* 16-20 days */
+tr.orange td   { background: #ffedd5 !important; color: #9a3412; } /* 11-15 days */
+tr.red td      { background: #fee2e2 !important; color: #b91c1c; } /* 10 days */
+tr.darkred td  { background: #7f1d1d !important; color: #ffffff; } /* 0-5 days */
+
+/* Default Restock (Optional: para hindi mag-conflict) */
+tr.restock td  { background: #fee2e2 !important; color: #b91c1c; }
 
 .classHeader{
   background:#4f46e5;
@@ -410,35 +417,59 @@ function render() {
     };
 
     Object.keys(groups).forEach(key => {
-        groups[key].sort((a, b) => b.restock - a.restock || b.stock - a.stock);
-        
-        if (groups[key].length > 0) {
-            tableHtml += `<div class="classHeader">${titles[key]}</div>`;
-            tableHtml += `<table><tr><th>Item</th><th>Stock</th><th>Hold</th><th>Remaining</th><th>Avg</th><th>Restock</th></tr>`;
-            groups[key].forEach(r => {
-                const displayHold = Math.round(r.rawHold);
-                const displayAvg = Math.round(r.rawAvg);
-                const isRed = r.restock > 0 ? "restock" : "";
-                tableHtml += `<tr class="${isRed}">
-                    <td>${r.item}</td>
-                    <td class="numVal" data-val="${r.stock}">0</td>
-                    <td class="numVal" data-val="${displayHold}">0</td>
-                    <td class="numVal" data-val="${r.days}">0</td>
-                    <td class="numVal" data-val="${displayAvg}">0</td>
-                    <td class="numVal" data-val="${r.restock}">0</td>
-                </tr>`;
-                feedHtml += `<div class="itemBox" style="${r.restock > 0 ? 'border-left:5px solid #d00;background:#fffafa;' : ''}">
-                    <div class="sub">CLASS ${r.cls}</div>
-                    <div class="title">${r.item}</div>
-                    <div class="valGrid">
-                        <div><div class="bigNum">${r.stock}</div><div class="sub">Stock</div></div>
-                        <div><div class="bigNum">${r.days}</div><div class="sub">Days</div></div>
-                        <div><div class="bigNum" style="color:${r.restock>0?'#d00':'#111'}">${r.restock}</div><div class="sub">Restock</div></div>
-                        <div><div class="bigNum">${displayHold}</div><div class="sub">Hold</div></div>
-                        <div><div class="bigNum">${displayAvg}</div><div class="sub">Avg</div></div>
-                    </div>
-                </div>`;
-            });
+        groups[key].forEach(r => {
+    const displayHold = Math.round(r.rawHold);
+    const displayAvg = Math.round(r.rawAvg);
+    
+    let rowClass = "";
+    let borderCol = "transparent";
+    let bgCol = "#fff";
+    let textCol = "#111";
+
+    // COLOR LOGIC BASE SA DAYS REMAINING
+    if (r.days <= 5) {
+        rowClass = "darkred";
+        borderCol = "#450a0a"; 
+        bgCol = "#7f1d1d";
+        textCol = "#fff";
+    } else if (r.days <= 10) {
+        rowClass = "red";
+        borderCol = "#b91c1c";
+        bgCol = "#fee2e2";
+    } else if (r.days <= 15) {
+        rowClass = "orange";
+        borderCol = "#9a3412";
+        bgCol = "#ffedd5";
+    } else if (r.days <= 20) {
+        rowClass = "yellow";
+        borderCol = "#854d0e";
+        bgCol = "#fef9c3";
+    }
+
+    // TABLE HTML
+    tableHtml += `<tr class="${rowClass}">
+        <td>${r.item}</td>
+        <td class="numVal" data-val="${r.stock}">0</td>
+        <td class="numVal" data-val="${displayHold}">0</td>
+        <td class="numVal" data-val="${r.days}">0</td>
+        <td class="numVal" data-val="${displayAvg}">0</td>
+        <td class="numVal" data-val="${r.restock}">0</td>
+    </tr>`;
+
+    // FEED CARD HTML
+    feedHtml += `
+    <div class="itemBox" style="border-left:5px solid ${borderCol}; background:${bgCol}; color:${textCol}">
+        <div class="sub" style="color:${r.days <= 5 ? '#ccc' : '#666'}">CLASS ${r.cls}</div>
+        <div class="title">${r.item}</div>
+        <div class="valGrid">
+            <div><div class="bigNum">${r.stock}</div><div class="sub">Stock</div></div>
+            <div><div class="bigNum">${r.days}</div><div class="sub">Days</div></div>
+            <div><div class="bigNum">${r.restock}</div><div class="sub">Restock</div></div>
+            <div><div class="bigNum">${displayHold}</div><div class="sub">Hold</div></div>
+            <div><div class="bigNum">${displayAvg}</div><div class="sub">Avg</div></div>
+        </div>
+    </div>`;
+});
             tableHtml += `</table>`;
         }
     });
