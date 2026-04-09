@@ -125,21 +125,28 @@ table{
 }
 
 th,td{
-  border:1px solid #eee;
-  padding:8px;
+  border:1px solid #ccc;
+  padding:10px 8px;
   text-align:center;
 }
 
-th{ background:#f8f9fa; font-weight:600; color: #444; }
+th{ background:#f8f9fa !important; font-weight:600; color: #444; }
 
-td.numVal{ font-weight:600; font-size:14px; color:#111; }
+td.numVal{ font-weight:700; font-size:14px; }
 
-th:nth-child(1), td:nth-child(1){ width:35%; text-align:left; padding-left:15px; }
+/* Adjusted equal column widths */
+th:nth-child(1), td:nth-child(1){ width:30%; text-align:left; padding-left:15px; }
+th:not(:nth-child(1)), td:not(:nth-child(1)) { width:14%; }
 
-tr.critical td { background: #880808 !important; color: #ffffff; } /* Dark Red */
-tr.danger td   { background: #FF69B4  !important; color: #ffffff; } /* Pink */
-tr.warning td  { background: #F57E0F !important; color: #ffffff; } /* Orange */
-tr.notice td   { background: #F2E70A !important; color: #000000; } /* Yellow */
+/* SOLID COLOR CODING (GSheet Style) */
+.bg-lime { background-color: #00ff00 !important; color: #000 !important; }
+.bg-cyan { background-color: #00ffff !important; color: #000 !important; }
+.bg-yellow { background-color: #ffff00 !important; color: #000 !important; }
+.bg-orange { background-color: #ff9900 !important; color: #000 !important; }
+.bg-red { background-color: #ff0000 !important; color: #fff !important; }
+
+/* Keep specific values bold/readable in colored rows */
+.bg-red .numVal, .bg-orange .numVal { color: inherit; }
 
 .classHeader{
   background:#4f46e5;
@@ -158,21 +165,21 @@ tr.notice td   { background: #F2E70A !important; color: #000000; } /* Yellow */
 }
 
 .itemBox{
-  background:#fff;
   padding:15px;
   border-radius:12px;
   box-shadow:0 4px 10px rgba(0,0,0,0.08);
   display:flex;
   flex-direction:column;
   transition: 0.3s;
+  border: 1px solid #ddd;
 }
 
 .itemBox:hover{ transform:scale(1.02); }
 
-.title{font-size:14px; font-weight:600; margin-bottom:5px;}
-.sub{font-size:11px; color:#666;}
+.title{font-size:14px; font-weight:700; margin-bottom:5px;}
+.sub{font-size:11px; opacity: 0.8;}
 .valGrid{ display:grid; grid-template-columns: repeat(5, 1fr); margin-top:10px; text-align:center;}
-.bigNum{ font-size:18px; font-weight:700; }
+.bigNum{ font-size:18px; font-weight:800; }
 
 #searchBox {
     width: 100%;
@@ -267,7 +274,6 @@ function parseInput(id) {
 
     text.split('\n').forEach(line => {
         if (!line.trim()) return;
-
         let rawName = "", name = "", v1 = 0, v2 = 0;
         let rawV1 = 0, rawV2 = 0;
 
@@ -277,7 +283,7 @@ function parseInput(id) {
             rawName = p.slice(0,-1).join('-').trim();
             v1 = num(p[p.length-1]);
             name = mapItemName(rawName);
-            if(!classMap[name]) return; // skip if item not in classMap
+            if(!classMap[name]) return; 
             const multiplier = pcs(rawName);
             rawV1 = v1;
             v1 = v1 * multiplier;
@@ -293,22 +299,14 @@ function parseInput(id) {
             const multiplier = pcs(rawName);
             let hold = num(cols[1]);
             let within = num(cols[2] || 0);
-            
-            rawV1 = hold;
-            rawV2 = within;
-            
-            v1 = hold * multiplier;
-            v2 = within * multiplier;
+            rawV1 = hold; rawV2 = within;
+            v1 = hold * multiplier; v2 = within * multiplier;
             name = mapItemName(rawName);
-
             if(!map[name]) map[name] = { val1:0, val2:0, raw1:0, raw2:0 };
-            map[name].val1 += v1;
-            map[name].val2 += v2;
-            map[name].raw1 += rawV1;
-            map[name].raw2 += rawV2;
+            map[name].val1 += v1; map[name].val2 += v2;
+            map[name].raw1 += rawV1; map[name].raw2 += rawV2;
         }
     });
-
     return map;
 }
 
@@ -330,12 +328,10 @@ function compute() {
 
     allNames.forEach(name => {
         const clsInfo = classMap[name] || { class: 'F', stock: 0 };
-
         const holdQty = hMap[name]?.val1 || 0;
         const within10 = hMap[name]?.val2 || 0;
         const rawHoldQty = hMap[name]?.raw1 || 0;
         const rawWithin10 = hMap[name]?.raw2 || 0;
-
         const shippedQty = sMap[name]?.val1 || 0;
         const rtsQty = rMap[name]?.val1 || 0;
         const supplierQty = supMap[name]?.val1 || 0;
@@ -348,37 +344,22 @@ function compute() {
         let remaining = 0;
         const cls = clsInfo.class;
 
-        if (cls === 'A') {
-            restock = round100(Math.max(holdQty + (avgOrder * 10) - safeStock, 0));
-        } else if (cls === 'B') {
-            restock = round100(Math.max(holdQty + (avgOrder * 5) - safeStock, 0));
-        } else if (cls === 'C') {
-            restock = round100(Math.max(holdQty + (avgOrder * 3) - safeStock, 0));
-        } else if (cls === 'D' || cls === 'F') {
-            restock = Math.max(holdQty - safeStock, 0);
-        } else if (cls === 'E') {
-            restock = 0;
-        }
+        if (cls === 'A') restock = round100(Math.max(holdQty + (avgOrder * 10) - safeStock, 0));
+        else if (cls === 'B') restock = round100(Math.max(holdQty + (avgOrder * 5) - safeStock, 0));
+        else if (cls === 'C') restock = round100(Math.max(holdQty + (avgOrder * 3) - safeStock, 0));
+        else if (cls === 'D' || cls === 'F') restock = Math.max(holdQty - safeStock, 0);
+        else if (cls === 'E') restock = 0;
 
         remaining = avgOrder > 0 ? Math.floor(safeStock / avgOrder) : 0;
 
         finalData.push({
-            item: name,
-            cls: cls,
-            stock: safeStock,
-            hold: holdQty,
-            avg: avgOrder,
-            rawHold: rawHoldQty,
-            rawAvg: rawAvgOrder,
-            days: remaining,
-            restock: restock
+            item: name, cls: cls, stock: safeStock, hold: holdQty, avg: avgOrder,
+            rawHold: rawHoldQty, rawAvg: rawAvgOrder, days: remaining, restock: restock
         });
     });
-
     render();
 }
 
-// Render function (table + feed)
 function render() {
     const search = document.getElementById('searchBox').value.toUpperCase();
     const output = document.getElementById('output');
@@ -390,10 +371,7 @@ function render() {
     );
 
     if (filtered.length === 0) {
-        empty.style.display = "block";
-        output.innerHTML = "";
-        feed.innerHTML = "";
-        return;
+        empty.style.display = "block"; output.innerHTML = ""; feed.innerHTML = ""; return;
     }
     empty.style.display = "none";
 
@@ -404,54 +382,30 @@ function render() {
     let feedHtml = "";
 
     const titles = {
-        A: "Class A (10 Days Buffer)",
-        B: "Class B (5 Days Buffer)",
-        C: "Class C (3 Days Buffer)",
-        D: "Class D (New Item)",
-        E: "Class E (Clearance)",
-        F: "Class F (For Hold)"
+        A: "Class A (10 Days)", B: "Class B (5 Days)", C: "Class C (3 Days)",
+        D: "Class D (New Item)", E: "Class E (Clearance)", F: "Class F (For Hold)"
     };
 
     Object.keys(groups).forEach(key => {
-        groups[key].sort((a, b) => b.restock - a.restock || b.days - a.days);
+        // Sort: Days ascending (Red -> Orange -> Yellow -> Cyan -> Lime)
+        groups[key].sort((a, b) => a.days - b.days || b.restock - a.restock);
         
         if (groups[key].length > 0) {
             tableHtml += `<div class="classHeader">${titles[key]}</div>`;
-            tableHtml += `<table><tr><th>Item</th><th>Stock</th><th>Hold</th><th>Remaining</th><th>Avg</th><th>Restock</th></tr>`;
+            tableHtml += `<table><tr><th>Item</th><th>Stock</th><th>Hold</th><th>Remaining Days</th><th>Avg</th><th>Restock</th></tr>`;
             
             groups[key].forEach(r => {
                 const displayHold = Math.round(r.rawHold);
                 const displayAvg = Math.round(r.rawAvg);
                 
-                // 1. SET TARGET DAYS PER CLASS
-                let targetDays = 0;
-                if (key === 'A') targetDays = 10;
-                else if (key === 'B') targetDays = 5;
-                else if (key === 'C') targetDays = 3;
-                else targetDays = 1;
+                let colorClass = "";
+                if (r.days >= 20) colorClass = "bg-lime";
+                else if (r.days >= 15) colorClass = "bg-cyan";
+                else if (r.days >= 10) colorClass = "bg-yellow";
+                else if (r.days >= 5) colorClass = "bg-orange";
+                else colorClass = "bg-red";
 
-                // 2. COLOR LOGIC
-                let rowClass = "";
-                let borderCol = "#ddd"; 
-                let bgCol = "#fff";
-                let textCol = "#111";
-
-                if (r.days <= 0 && r.avg > 0) {
-                    rowClass = "critical"; // Dark Red
-                    borderCol = "#450a0a"; bgCol = "#7f1d1d"; textCol = "#fff";
-                } else if (r.days <= (targetDays * 0.5)) {
-                    rowClass = "danger"; // Red
-                    borderCol = "#b91c1c"; bgCol = "#fee2e2";
-                } else if (r.days <= targetDays) {
-                    rowClass = "warning"; // Orange
-                    borderCol = "#9a3412"; bgCol = "#ffedd5";
-                } else if (r.days <= (targetDays * 2)) {
-                    rowClass = "notice"; // Yellow
-                    borderCol = "#854d0e"; bgCol = "#fef9c3";
-                }
-
-                // TABLE ROW
-                tableHtml += `<tr class="${rowClass}">
+                tableHtml += `<tr class="${colorClass}">
                     <td>${r.item}</td>
                     <td class="numVal" data-val="${r.stock}">0</td>
                     <td class="numVal" data-val="${displayHold}">0</td>
@@ -460,10 +414,8 @@ function render() {
                     <td class="numVal" data-val="${r.restock}">0</td>
                 </tr>`;
 
-                // FEED CARD
-                feedHtml += `
-                <div class="itemBox" style="border-left:5px solid ${borderCol}; background:${bgCol}; color:${textCol}">
-                    <div class="sub" style="color:${textCol === '#fff' ? '#ccc' : '#666'}">CLASS ${r.cls}</div>
+                feedHtml += `<div class="itemBox ${colorClass}">
+                    <div class="sub">CLASS ${r.cls}</div>
                     <div class="title">${r.item}</div>
                     <div class="valGrid">
                         <div><div class="bigNum">${r.stock}</div><div class="sub">Stock</div></div>
@@ -517,12 +469,8 @@ function uploadFull() {
     const payload = {
         FULL_UPLOAD: finalData.map(r => ({
             item: (r.item||"").toString().trim().toUpperCase(),
-            class: r.cls,
-            stock: Number(r.stock||0),
-            hold: Number(r.hold||0),
-            avg: Number(r.avg||0),
-            restock: Number(r.restock||0),
-            remaining: Number(r.days||0)
+            class: r.cls, stock: Number(r.stock||0), hold: Number(r.hold||0),
+            avg: Number(r.avg||0), restock: Number(r.restock||0), remaining: Number(r.days||0)
         })),
         HOLD_UPLOAD: document.getElementById('hold').value
             .split('\n')
