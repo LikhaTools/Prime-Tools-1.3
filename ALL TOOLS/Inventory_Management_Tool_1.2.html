@@ -134,9 +134,9 @@ th{ background:#f8f9fa !important; font-weight:600; color: #444; }
 
 td.numVal{ font-weight:700; font-size:14px; }
 
-/* Adjusted equal column widths */
-th:nth-child(1), td:nth-child(1){ width:30%; text-align:left; padding-left:15px; }
-th:not(:nth-child(1)), td:not(:nth-child(1)) { width:14%; }
+/* Adjusted equal column widths for 7 columns */
+th:nth-child(1), td:nth-child(1){ width:28%; text-align:left; padding-left:15px; }
+th:not(:nth-child(1)), td:not(:nth-child(1)) { width:12%; }
 
 /* SOLID COLOR CODING (GSheet Style) */
 .bg-lime { background-color: #00ff00 !important; color: #000 !important; }
@@ -178,7 +178,8 @@ th:not(:nth-child(1)), td:not(:nth-child(1)) { width:14%; }
 
 .title{font-size:14px; font-weight:700; margin-bottom:5px;}
 .sub{font-size:11px; opacity: 0.8;}
-.valGrid{ display:grid; grid-template-columns: repeat(5, 1fr); margin-top:10px; text-align:center;}
+/* Updated to 6 columns for the valGrid */
+.valGrid{ display:grid; grid-template-columns: repeat(6, 1fr); margin-top:10px; text-align:center;}
 .bigNum{ font-size:18px; font-weight:800; }
 
 #searchBox {
@@ -337,7 +338,9 @@ function compute() {
         const supplierQty = supMap[name]?.val1 || 0;
 
         let safeStock = Math.max(clsInfo.stock + supplierQty + rtsQty - shippedQty, 0);
+        // avgOrder here serves as the total multiplied average (Avg Release)
         const avgOrder = within10 > 0 ? (within10 / 10) : 0;
+        // rawAvgOrder is the unmultiplied base average (Avg Order)
         const rawAvgOrder = rawWithin10 > 0 ? (rawWithin10 / 10) : 0;
 
         let restock = 0;
@@ -354,7 +357,8 @@ function compute() {
 
         finalData.push({
             item: name, cls: cls, stock: safeStock, hold: holdQty, avg: avgOrder,
-            rawHold: rawHoldQty, rawAvg: rawAvgOrder, days: remaining, restock: restock
+            rawHold: rawHoldQty, rawAvg: rawAvgOrder, days: remaining, restock: restock,
+            avgRelease: avgOrder // Explicitly mapping for clarity in UI
         });
     });
     render();
@@ -392,11 +396,12 @@ function render() {
         
         if (groups[key].length > 0) {
             tableHtml += `<div class="classHeader">${titles[key]}</div>`;
-            tableHtml += `<table><tr><th>Item</th><th>Stock</th><th>Hold</th><th>Remaining Days</th><th>Avg</th><th>Restock</th></tr>`;
+            tableHtml += `<table><tr><th>Item</th><th>Stock</th><th>Hold</th><th>Remaining Days</th><th>Avg Order</th><th>Avg Release</th><th>Restock</th></tr>`;
             
             groups[key].forEach(r => {
                 const displayHold = Math.round(r.rawHold);
-                const displayAvg = Math.round(r.rawAvg);
+                const displayAvgOrder = Math.round(r.rawAvg);
+                const displayAvgRelease = Math.round(r.avgRelease);
                 
                 let colorClass = "";
                 if (r.days >= 20) colorClass = "bg-lime";
@@ -410,7 +415,8 @@ function render() {
                     <td class="numVal" data-val="${r.stock}">0</td>
                     <td class="numVal" data-val="${displayHold}">0</td>
                     <td class="numVal" data-val="${r.days}">0</td>
-                    <td class="numVal" data-val="${displayAvg}">0</td>
+                    <td class="numVal" data-val="${displayAvgOrder}">0</td>
+                    <td class="numVal" data-val="${displayAvgRelease}">0</td>
                     <td class="numVal" data-val="${r.restock}">0</td>
                 </tr>`;
 
@@ -422,7 +428,8 @@ function render() {
                         <div><div class="bigNum">${r.days}</div><div class="sub">Days</div></div>
                         <div><div class="bigNum">${r.restock}</div><div class="sub">Restock</div></div>
                         <div><div class="bigNum">${displayHold}</div><div class="sub">Hold</div></div>
-                        <div><div class="bigNum">${displayAvg}</div><div class="sub">Avg</div></div>
+                        <div><div class="bigNum">${displayAvgOrder}</div><div class="sub">Avg Order</div></div>
+                        <div><div class="bigNum">${displayAvgRelease}</div><div class="sub">Avg Release</div></div>
                     </div>
                 </div>`;
             });
@@ -470,7 +477,8 @@ function uploadFull() {
         FULL_UPLOAD: finalData.map(r => ({
             item: (r.item||"").toString().trim().toUpperCase(),
             class: r.cls, stock: Number(r.stock||0), hold: Number(r.hold||0),
-            avg: Number(r.avg||0), restock: Number(r.restock||0), remaining: Number(r.days||0)
+            avg: Number(r.avg||0), restock: Number(r.restock||0), remaining: Number(r.days||0),
+            avgRelease: Number(r.avgRelease||0)
         })),
         HOLD_UPLOAD: document.getElementById('hold').value
             .split('\n')
