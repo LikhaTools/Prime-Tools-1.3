@@ -209,7 +209,7 @@ else if(r.days >= 5) color="bg-orange";
 html += `<tr>
 <td>${r.item}</td>
 <td class="numVal" data-val="${r.stock}">0</td>
-<td class="numVal" data-val="${Math.round(r.hold)}">0</td>
+<td class="numVal ${r.stock > 0 && r.hold > 0 ? 'bg-red' : ''}" data-val="${Math.round(r.hold)}">0</td>
 <td class="numVal ${color}" data-val="${r.days}">0</td>
 <td class="numVal" data-val="${Math.round(r.avg)}">0</td>
 <td class="numVal" data-val="${Math.round(r.avgRelease)}">0</td>
