@@ -8,7 +8,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
 body{ font-family:'Inter',sans-serif; margin:0; background:#f5f5f5; color:#111; overflow:hidden; }
+
 .container{ display:flex; height:100vh; position:relative; margin-left:25px; }
+
 .topTitle{ position:fixed; top:12px; left:45px; font-size:18px; font-weight:700; color:#4f46e5; z-index:1000; letter-spacing:0.5px; }
 .left{ width:27%; background:#fff; padding:60px 12px 16px 12px; display:flex; flex-direction:column; gap:8px; font-size:13px; overflow-y:auto; box-sizing:border-box; }
 .left h3{ margin:0 0 10px 0; font-size:16px; }
@@ -21,10 +23,19 @@ textarea{ width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; bac
 .empty{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; color:#888; font-weight:600; }
 @keyframes fadeInOut{ 0%,100%{opacity:0.3;} 50%{opacity:1;} }
 
+.photoDateHeader {
+    color: #111;
+    text-align: center;
+    padding: 10px 0 20px 0;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
 table{ width:100%; border-collapse:collapse; margin-bottom:25px; background:#fff; border-radius:10px; overflow:hidden; table-layout:fixed; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 th,td{ border:1px solid #ccc; padding:10px 8px; text-align:center; }
 
-/* ✅ DARK HEADER */
 th{
 background:#111 !important;
 color:#fff !important;
@@ -33,17 +44,22 @@ border:1px solid #111;
 }
 
 td.numVal{ font-weight:700; font-size:14px; }
-th:nth-child(1), td:nth-child(1){ width:28%; text-align:left; padding-left:15px; }
-th:not(:nth-child(1)), td:not(:nth-child(1)) { width:12%; }
 
-/* TABLE COLORS (FULL CELL) */
+/* ✅ COLUMN WIDTHS */
+th:nth-child(1), td:nth-child(1){ width:24%; text-align:left; padding-left:15px; } 
+
+/* Standard tables (7 columns left after item) */
+.table-std th:not(:nth-child(1)) { width: 12.6%; }
+
+/* Class S table (8 columns left after item) */
+.table-s th:not(:nth-child(1)) { width: 10.8%; }
+
 .bg-lime { background-color: #00ff00 !important; color:#000 !important; }
 .bg-cyan { background-color: #00ffff !important; color:#000 !important; }
 .bg-yellow { background-color: #ffff00 !important; color:#000 !important; }
 .bg-orange { background-color: #ff9900 !important; color:#000 !important; }
 .bg-red { background-color: #ff0000 !important; color:#fff !important; }
 
-/* FEED CARD COLORS */
 .itemBox.bg-lime { background:#00ff00 !important; color:#000 !important; }
 .itemBox.bg-cyan { background:#00ffff !important; color:#000 !important; }
 .itemBox.bg-yellow { background:#ffff00 !important; color:#000 !important; }
@@ -118,7 +134,13 @@ try {
 const response = await fetch(WEBAPP_URL);
 const data = await response.json();
 classMap = {};
-data.classMap.forEach(r => { classMap[r.name.toUpperCase()] = { class: r.class, stock: num(r.stock) }; });
+data.classMap.forEach(r => { 
+    classMap[r.name.toUpperCase()] = { 
+        class: r.class, 
+        stock: num(r.stock),
+        type: r.type || "" 
+    }; 
+});
 itemMapping = data.itemMapping || {};
 compute();
 } catch (e) { alert("Fetch Error: " + e.message); } finally { btn.disabled = false; }
@@ -156,7 +178,7 @@ const hMap = parseInput('hold'), sMap = parseInput('shipped'), rMap = parseInput
 const allNames = new Set([...Object.keys(classMap), ...Object.keys(hMap), ...Object.keys(supMap)]);
 finalData = [];
 allNames.forEach(name => {
-const info = classMap[name] || { class: 'F', stock: 0 };
+const info = classMap[name] || { class: 'F', stock: 0, type: "" };
 const holdPcs = hMap[name]?.val1 || 0, within10Pcs = hMap[name]?.val2 || 0;
 const rawHold = hMap[name]?.raw1 || 0, rawWithin10 = hMap[name]?.raw2 || 0;
 
@@ -173,7 +195,19 @@ const target = { A:10, B:5, C:3, D:2, F:1, E:0 }[info.class] || 0;
 if(info.class !== 'E') restock = Math.max(0, (avgReleasePcs * target) + holdPcs - totalStock);
 if(['A','B','C'].includes(info.class)) restock = round100(restock);
 
-finalData.push({ item: name, cls: info.class, stock: totalStock, hold: rawHold, avg: rawAvgOrder, avgRelease: avgReleasePcs, days, restock });
+const finalType = info.type ? info.type : (name.includes("IMPORT") ? "IMPORT" : "LOCAL");
+
+finalData.push({ 
+    item: name, 
+    type: finalType, 
+    cls: info.class, 
+    stock: totalStock, 
+    hold: rawHold, 
+    avg: rawAvgOrder, 
+    avgRelease: avgReleasePcs, 
+    days, 
+    restock 
+});
 });
 render();
 }
@@ -185,19 +219,51 @@ const output = document.getElementById('output'), feed = document.getElementById
 if (filtered.length === 0) { empty.style.display = "block"; output.innerHTML = ""; feed.innerHTML = ""; return; }
 empty.style.display = "none";
 
-const groups = { A:[], B:[], C:[], D:[], E:[], F:[] };
-filtered.forEach(r => groups[r.cls]?.push(r));
+const options = { year: 'numeric', month: 'long', day: 'numeric' };
+const today = new Date().toLocaleDateString('en-US', options).toUpperCase();
 
-let html = "", fhtml = "";
-const titles = { A:"Class A (10 Days)", B:"Class B (5 Days)", C:"Class C (3 Days)", D:"Class D (New Item)", E:"Class E (Clearance)", F:"Class F (For Hold)" };
+let html = `<div class="photoDateHeader">STOCK / RESTOCK for ${today}</div>`;
+let fhtml = "";
+
+const groups = { S:[], A:[], B:[], C:[], D:[], E:[], F:[] };
+filtered.forEach(r => {
+    if (r.type === "IMPORT") groups.S.push(r);
+    else groups[r.cls]?.push(r);
+});
+
+const titles = {
+S:"Class S (For Import)",
+A:"Class A (10 Days) - Running Ads",
+B:"Class B (5 Days) - Running Ads",
+C:"Class C (3 Days) - Running Ads",
+D:"Class D (New Item) - Running Ads",
+E:"Class E (Clearance) - Running Ads",
+F:"Class F (For Hold) - Off Ads"
+};
 
 Object.keys(groups).forEach(k => {
 if (!groups[k].length) return;
-groups[k].sort((a,b) => a.days - b.days || b.restock - a.restock);
 
+// ✅ SORTING: Class S sorts by Class (A-F), Others sort by Days
+if (k === 'S') {
+    groups[k].sort((a,b) => a.cls.localeCompare(b.cls));
+} else {
+    groups[k].sort((a,b) => a.days - b.days || b.restock - a.restock);
+}
+
+const isS = (k === 'S');
 html += `<div class="classHeader">${titles[k]}</div>
-<table>
-<tr><th>Item</th><th>Stock</th><th>Hold</th><th>Remaining Days</th><th>Avg Order</th><th>Avg Release</th><th>Restock</th></tr>`;
+<table class="${isS ? 'table-s' : 'table-std'}">
+<tr>
+    <th>Item</th>
+    ${isS ? '<th>Class</th>' : ''}
+    <th>Stock</th>
+    <th>Hold</th>
+    <th>Remaining Days</th>
+    <th>Avg Order</th>
+    <th>Avg Release</th>
+    <th>Restock</th>
+</tr>`;
 
 groups[k].forEach(r => {
 let color = "bg-red";
@@ -208,8 +274,9 @@ else if(r.days >= 5) color="bg-orange";
 
 html += `<tr>
 <td>${r.item}</td>
-<td class="numVal" data-val="${r.stock}">0</td>
-<td class="numVal ${r.stock > 0 && r.hold > 0 ? 'bg-red' : ''}" data-val="${Math.round(r.hold)}">0</td>
+${isS ? `<td>${r.cls}</td>` : ''}
+<td class="numVal ${r.stock > 0 && r.hold > 0 ? 'bg-red' : ''}" data-val="${r.stock}">0</td>
+<td class="numVal ${r.hold > 100 || (r.stock > 0 && r.hold > 0) ? 'bg-red' : ''}" data-val="${Math.round(r.hold)}">0</td>
 <td class="numVal ${color}" data-val="${r.days}">0</td>
 <td class="numVal" data-val="${Math.round(r.avg)}">0</td>
 <td class="numVal" data-val="${Math.round(r.avgRelease)}">0</td>
