@@ -1,232 +1,498 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNIQUE SHIPPING COST & COD</title>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-family: Arial, sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        table {
-            width: 80%;
-            border-collapse: collapse;
-            text-align: center;
-            margin-top: 20px;
-        }
+<title>UNIQUE SHIPPING COST & COD</title>
 
-        th, td {
-            border: 1px solid #000;
-            padding: 8px;
-        }
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-        th {
-            background-color: #f2f2f2;
-        }
+<style>
 
-        h1 {
-            text-align: center;
-        }
+body{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    font-family:Arial,sans-serif;
+}
 
-        #fileInput, button {
-            margin: 10px;
-        }
+table{
+    width:80%;
+    border-collapse:collapse;
+    text-align:center;
+    margin-top:20px;
+}
 
-        #loadingIndicator {
-            display: none;
-            text-align: center;
-            margin-top: 20px;
-            font-size: 18px;
-            color: #555;
-            background-color: rgba(0, 0, 0, 0.1);
-            padding: 10px;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-    </style>
+th,td{
+    border:1px solid #000;
+    padding:8px;
+}
+
+th{
+    background:#f2f2f2;
+}
+
+button,
+#fileInput{
+    margin:10px;
+}
+
+.greenCell{
+    background:green;
+    color:#fff;
+    font-weight:bold;
+}
+
+.redCell{
+    background:red;
+    color:#fff;
+    font-weight:bold;
+}
+
+</style>
+
 </head>
+
 <body>
-    <h1>UNIQUE SHIPPING COST & COD</h1>
-    <div>
-        <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" />
-        <button onclick="processFile()">Process File</button>
-    </div>
-    <div id="loadingIndicator">Processing file... Please wait.</div>
 
-    <h2>Unique Shipping Cost</h2>
-    <table border="1" id="outputTableShipping">
-        <thead>
-            <tr>
-                <th>DATE</th>
-                <th>UNIQUE SHIPPING COST</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+<h1>UNIQUE SHIPPING COST & COD</h1>
 
-    <h2>Unique COD Amounts Per Sender</h2>
-    <table border="1" id="outputTableCOD">
-        <thead>
-            <tr>
-                <th>SENDER NAME</th>
-                <th>UNIQUE COD AMOUNTS</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+<div>
 
-    <script>
-        function processFile() {
-            const fileInput = document.getElementById('fileInput').files[0];
+<input
+    type="file"
+    id="fileInput"
+    accept=".xlsx,.xls,.csv"
+>
 
-            if (!fileInput) {
-                alert("Please select a file first.");
-                return;
-            }
+<button onclick="processFile()">
+    Process File
+</button>
 
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            loadingIndicator.style.display = 'block';
+<button onclick="uploadDataToSheet()">
+    Upload Data
+</button>
 
-            const fileName = fileInput.name;
-            const fileExtension = fileName.split('.').pop().toLowerCase();
+<span
+    id="uploadStatus"
+    style="
+        margin-left:10px;
+        font-weight:bold;
+    "
+></span>
 
-            if (fileExtension === 'xlsx' || fileExtension === 'xls') {
-                processExcelFile(fileInput, loadingIndicator);
-            } else if (fileExtension === 'csv') {
-                processCSVFile(fileInput, loadingIndicator);
-            } else {
-                alert("Invalid file type. Please upload an Excel or CSV file.");
-                loadingIndicator.style.display = 'none';
-            }
-        }
+</div>
 
-        function processExcelFile(file, loadingIndicator) {
-            const reader = new FileReader();
+<h2>Unique Shipping Cost</h2>
 
-            reader.onload = function (e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+<table id="outputTableShipping">
 
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+<thead>
+<tr>
+<th>DATE</th>
+<th>UNIQUE SHIPPING COST</th>
+</tr>
+</thead>
 
-                processSheet(jsonData, loadingIndicator);
-            };
+<tbody></tbody>
 
-            reader.readAsArrayBuffer(file);
-        }
+</table>
 
-        function processCSVFile(file, loadingIndicator) {
-            const reader = new FileReader();
+<h2>Unique COD Amounts Per Sender</h2>
 
-            reader.onload = function (e) {
-                const csvData = e.target.result;
-                const workbook = XLSX.read(csvData, { type: 'string' });
+<table id="outputTableCOD">
 
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+<thead>
+<tr>
+<th>SENDER NAME</th>
+<th>UNIQUE COD AMOUNTS</th>
+</tr>
+</thead>
 
-                processSheet(jsonData, loadingIndicator);
-            };
+<tbody></tbody>
 
-            reader.readAsText(file);
-        }
+</table>
 
-        function processSheet(data, loadingIndicator) {
-            if (!data || data.length === 0) {
-                alert("The file is empty or improperly formatted.");
-                loadingIndicator.style.display = 'none';
-                return;
-            }
+<script>
 
-            // Normalize headers: Trim spaces and convert to lowercase
-            const headers = data[0].map(header => header ? header.toLowerCase().trim() : '');
+function processFile(){
 
-            console.log("Detected headers:", headers); // Debugging log
+    const file =
+        document.getElementById('fileInput')
+        .files[0];
 
-            // Column indexes
-            const submissionTimeIndex = headers.findIndex(h => h === "submission time");
-            const shippingCostIndex = headers.findIndex(h => h === "total shipping cost");
-            const senderNameIndex = headers.findIndex(h => h === "sender name");
-            const codIndex = headers.findIndex(h => h === "cod");
+    if(!file){
 
-            if (submissionTimeIndex === -1 || shippingCostIndex === -1) {
-                alert("Required columns not found: 'Submission Time' or 'Total Shipping Cost'. Please check your file.");
-                console.log("Detected headers:", headers); // Debugging log
-                loadingIndicator.style.display = 'none';
-                return;
-            }
+        alert("Please select file.");
+        return;
 
-            if (senderNameIndex === -1 || codIndex === -1) {
-                alert("Required columns not found: 'Sender Name' or 'Cod'. Please check your file.");
-                console.log("Detected headers:", headers); // Debugging log
-                loadingIndicator.style.display = 'none';
-                return;
-            }
+    }
 
-            // Extract unique shipping costs
-            const submissionDates = data.slice(1)
-                .map(row => row[submissionTimeIndex])
-                .filter(date => date && !isNaN(Date.parse(date)));
+    const reader =
+        new FileReader();
 
-            const shippingCosts = data.slice(1)
-                .map(row => parseFloat(row[shippingCostIndex]))
-                .filter(cost => !isNaN(cost));
+    reader.onload = function(e){
 
-            const uniqueShippingCosts = [...new Set(shippingCosts)].sort((a, b) => a - b);
-            const dateRange = getDateRange(submissionDates);
+        const data =
+            new Uint8Array(
+                e.target.result
+            );
 
-            // Display shipping costs
-            document.querySelector('#outputTableShipping tbody').innerHTML = `
-                <tr>
-                    <td>${dateRange}</td>
-                    <td>${uniqueShippingCosts.join(', ')}</td>
-                </tr>
-            `;
-
-            // Extract unique COD amounts per sender
-            const senderCODMap = new Map();
-
-            data.slice(1).forEach(row => {
-                const sender = row[senderNameIndex]?.trim();
-                const codAmount = parseFloat(row[codIndex]);
-
-                if (sender && !isNaN(codAmount)) {
-                    if (!senderCODMap.has(sender)) {
-                        senderCODMap.set(sender, new Set());
-                    }
-                    senderCODMap.get(sender).add(codAmount);
-                }
+        const workbook =
+            XLSX.read(data,{
+                type:'array'
             });
 
-            // Display unique COD amounts per sender
-            const outputTableBodyCOD = document.querySelector('#outputTableCOD tbody');
-            outputTableBodyCOD.innerHTML = '';
+        const sheet =
+            workbook.Sheets[
+                workbook.SheetNames[0]
+            ];
 
-            senderCODMap.forEach((codSet, sender) => {
-                const uniqueCODs = [...codSet].sort((a, b) => a - b).join(', ');
-                outputTableBodyCOD.innerHTML += `
-                    <tr>
-                        <td>${sender}</td>
-                        <td>${uniqueCODs}</td>
-                    </tr>
-                `;
+        const jsonData =
+            XLSX.utils.sheet_to_json(
+                sheet,
+                {header:1}
+            );
+
+        processSheet(jsonData);
+
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+function processSheet(data){
+
+    const headers =
+        data[0].map(h =>
+            h
+            ? h.toLowerCase().trim()
+            : ''
+        );
+
+    const submissionTimeIndex =
+        headers.findIndex(
+            h => h.includes("submission time")
+        );
+
+    const shippingCostIndex =
+        headers.findIndex(
+            h => h.includes("total shipping cost")
+        );
+
+    const senderNameIndex =
+        headers.findIndex(
+            h => h.includes("sender name")
+        );
+
+    const codIndex =
+        headers.findIndex(
+            h => h === "cod"
+        );
+
+    const submissionDates =
+        data.slice(1)
+        .map(row => row[submissionTimeIndex])
+        .filter(date =>
+            date &&
+            !isNaN(Date.parse(date))
+        );
+
+    const shippingCosts =
+        data.slice(1)
+        .map(row =>
+            parseFloat(
+                row[shippingCostIndex]
+            )
+        )
+        .filter(cost =>
+            !isNaN(cost)
+        );
+
+    const uniqueShippingCosts =
+        [...new Set(shippingCosts)]
+        .sort((a,b)=>a-b);
+
+    const dateRange =
+        getDateRange(submissionDates);
+
+    const shippingCellClass =
+        uniqueShippingCosts.some(
+            cost => cost > 37
+        )
+        ? 'redCell'
+        : 'greenCell';
+
+    document.querySelector(
+        '#outputTableShipping tbody'
+    ).innerHTML = `
+        <tr>
+            <td>${dateRange}</td>
+
+            <td class="${shippingCellClass}">
+                ${uniqueShippingCosts.join(', ')}
+            </td>
+        </tr>
+    `;
+
+    const senderCODMap =
+        new Map();
+
+    data.slice(1).forEach(row => {
+
+        const sender =
+            row[senderNameIndex]?.trim();
+
+        const codAmount =
+            parseFloat(row[codIndex]);
+
+        if(sender && !isNaN(codAmount)){
+
+            if(!senderCODMap.has(sender)){
+
+                senderCODMap.set(
+                    sender,
+                    new Set()
+                );
+
+            }
+
+            senderCODMap
+            .get(sender)
+            .add(codAmount);
+
+        }
+
+    });
+
+    const tbody =
+        document.querySelector(
+            '#outputTableCOD tbody'
+        );
+
+    tbody.innerHTML = '';
+
+    senderCODMap.forEach(
+        (codSet,sender)=>{
+
+        const uniqueCODs =
+            [...codSet]
+            .sort((a,b)=>a-b)
+            .join(', ');
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${sender}</td>
+                <td>${uniqueCODs}</td>
+            </tr>
+        `;
+
+    });
+
+}
+
+function getDateRange(dates){
+
+    const parsed =
+        dates
+        .map(d => new Date(d))
+        .filter(d => !isNaN(d));
+
+    if(parsed.length===0){
+
+        return 'N/A';
+
+    }
+
+    return `
+        ${parsed[0]
+            .toISOString()
+            .split('T')[0]}
+        to
+        ${parsed[
+            parsed.length-1
+        ]
+            .toISOString()
+            .split('T')[0]}
+    `;
+}
+
+async function uploadDataToSheet(){
+
+    const file =
+        document.getElementById('fileInput')
+        .files[0];
+
+    if(!file){
+
+        alert("Please select file.");
+        return;
+
+    }
+
+    const uploadStatus =
+        document.getElementById(
+            'uploadStatus'
+        );
+
+    uploadStatus.style.color =
+        'green';
+
+    uploadStatus.innerText =
+        'Preparing...';
+
+    const reader =
+        new FileReader();
+
+    reader.onload =
+    async function(e){
+
+        const data =
+            new Uint8Array(
+                e.target.result
+            );
+
+        const workbook =
+            XLSX.read(data,{
+                type:'array'
             });
 
-            loadingIndicator.style.display = 'none';
+        const sheet =
+            workbook.Sheets[
+                workbook.SheetNames[0]
+            ];
+
+        const jsonData =
+            XLSX.utils.sheet_to_json(
+                sheet,
+                {header:1}
+            );
+
+        const headers =
+            jsonData[0].map(h =>
+                h
+                ? h.toLowerCase().trim()
+                : ''
+            );
+
+        const senderNameIndex =
+            headers.findIndex(
+                h => h.includes("sender name")
+            );
+
+        const itemNameIndex =
+            headers.findIndex(
+                h => h.includes("item")
+            );
+
+        const waybillIndex =
+            headers.findIndex(
+                h => h.includes("waybill")
+            );
+
+        const submissionTimeIndex =
+            headers.findIndex(
+                h => h.includes("submission time")
+            );
+
+        const uploadData = [];
+
+        for(
+            const row of jsonData.slice(1)
+        ){
+
+            uploadData.push({
+
+                sender_name:
+                    row[senderNameIndex] || "",
+
+                item_name:
+                    row[itemNameIndex] || "",
+
+                waybill:
+                    row[waybillIndex] || "",
+
+                submission_time:
+                    row[submissionTimeIndex] || ""
+
+            });
+
         }
 
-        function getDateRange(dates) {
-            const parsedDates = dates.map(date => new Date(date)).filter(date => !isNaN(date));
-            if (parsedDates.length === 0) return 'N/A';
-            return `${parsedDates[0].toISOString().split('T')[0]} to ${parsedDates[parsedDates.length - 1].toISOString().split('T')[0]}`;
+        uploadStatus.innerText =
+            `Uploading ${uploadData.length} rows...`;
+
+        try{
+
+            const response =
+                await fetch(
+                "https://script.google.com/macros/s/AKfycbx0hihRBW3ISWzQh8ANZNPvWVFN9_R3pddtavO_tmFkiSECtbiv7pyMpOABzWgV4pPW/exec",
+                {
+                    method:'POST',
+
+                    headers:{
+                        "Content-Type":
+                        "text/plain;charset=utf-8"
+                    },
+
+                    body:JSON.stringify(
+                        uploadData
+                    )
+                });
+
+            const result =
+                await response.json();
+
+            if(result.success){
+
+                uploadStatus.style.color =
+                    'green';
+
+                uploadStatus.innerText =
+                    `${result.uploaded} Uploaded Successfully`;
+
+                alert(
+                    "Upload successful!"
+                );
+
+            }else{
+
+                uploadStatus.style.color =
+                    'red';
+
+                uploadStatus.innerText =
+                    'UPLOAD FAILED';
+
+                alert(
+                    result.error
+                );
+
+            }
+
+        }catch(err){
+
+            console.error(err);
+
+            uploadStatus.style.color =
+                'red';
+
+            uploadStatus.innerText =
+                'UPLOAD FAILED';
+
+            alert(
+                "Error uploading data."
+            );
+
         }
-    </script>
+
+    };
+
+    reader.readAsArrayBuffer(file);
+
+}
+
+</script>
+
 </body>
 </html>
